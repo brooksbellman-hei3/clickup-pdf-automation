@@ -161,4 +161,54 @@ function generateColors(count) {
   return colors;
 }
 
-async function emailReport(pdfPath, taskCoun
+async function emailReport(pdfPath, taskCount) {
+  console.log("📧 Sending email...");
+  
+  const transporter = nodemailer.createTransporter({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT),
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  // Verify transporter configuration
+  try {
+    await transporter.verify();
+    console.log("✅ Email server connection verified");
+  } catch (error) {
+    console.error("❌ Email server verification failed:", error.message);
+    throw error;
+  }
+
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    timeZone: process.env.TIMEZONE || 'America/New_York',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: process.env.EMAIL_TO,
+    subject: `📊 Daily ClickUp Report - ${currentDate}`,
+    html: `
+      <h2>📊 Daily ClickUp Report</h2>
+      <p><strong>Date:</strong> ${currentDate}</p>
+      <p><strong>Total Tasks Processed:</strong> ${taskCount}</p>
+      <p>Please find your detailed task analysis report attached.</p>
+      <br>
+      <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
+    `,
+    attachments: [{ 
+      filename: `clickup_report_${new Date().toISOString().split('T')[0]}.pdf`, 
+      path: pdfPath 
+    }],
+  });
+  
+  console.log("✅ Email sent successfully");
+}
+
+module.exports = sendReport;
