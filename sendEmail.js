@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
-const generateChart = require('./generateCharts');
+const { generatePieChart, generateLineChart } = require('./generateCharts');
 const createPDF = require('./createPDF');
 const fs = require('fs');
 
@@ -82,7 +82,7 @@ async function generateStatusChart(tasks) {
 
   if (labels.length === 0) return null;
 
-  return await generateChart('Task Status Distribution', labels, data, colors);
+  return await generatePieChart('Task Status Distribution', labels, data, colors);
 }
 
 async function generatePriorityChart(tasks) {
@@ -99,7 +99,7 @@ async function generatePriorityChart(tasks) {
 
   if (labels.length === 0) return null;
 
-  return await generateChart('Task Priority Distribution', labels, data, colors);
+  return await generatePieChart('Task Priority Distribution', labels, data, colors);
 }
 
 async function generateAssigneeChart(tasks) {
@@ -123,7 +123,7 @@ async function generateAssigneeChart(tasks) {
 
   if (labels.length === 0) return null;
 
-  return await generateChart('Task Assignment Distribution', labels, data, colors);
+  return await generatePieChart('Task Assignment Distribution', labels, data, colors);
 }
 
 async function generateCreationTrendChart(tasks) {
@@ -145,47 +145,7 @@ async function generateCreationTrendChart(tasks) {
 
   if (sortedDates.length === 0) return null;
 
-  // For line chart, we'll use a different chart type
   return await generateLineChart('Task Creation Trend (30 days)', sortedDates, data);
-}
-
-async function generateLineChart(title, labels, data) {
-  const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-  const width = 800;
-  const height = 600;
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
-
-  const configuration = {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Tasks Created',
-        data,
-        borderColor: '#36a2eb',
-        backgroundColor: 'rgba(54, 162, 235, 0.1)',
-        tension: 0.1
-      }],
-    },
-    options: {
-      plugins: {
-        title: {
-          display: true,
-          text: title,
-        },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1
-          }
-        }
-      }
-    },
-  };
-
-  return await chartJSNodeCanvas.renderToBuffer(configuration);
 }
 
 function generateColors(count) {
@@ -201,54 +161,4 @@ function generateColors(count) {
   return colors;
 }
 
-async function emailReport(pdfPath, taskCount) {
-  console.log("📧 Sending email...");
-  
-  const transporter = nodemailer.createTransporter({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
-  // Verify transporter configuration
-  try {
-    await transporter.verify();
-    console.log("✅ Email server connection verified");
-  } catch (error) {
-    console.error("❌ Email server verification failed:", error.message);
-    throw error;
-  }
-
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    timeZone: process.env.TIMEZONE || 'America/New_York',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-
-  await transporter.sendMail({
-    from: process.env.SMTP_USER,
-    to: process.env.EMAIL_TO,
-    subject: `📊 Daily ClickUp Report - ${currentDate}`,
-    html: `
-      <h2>📊 Daily ClickUp Report</h2>
-      <p><strong>Date:</strong> ${currentDate}</p>
-      <p><strong>Total Tasks Processed:</strong> ${taskCount}</p>
-      <p>Please find your detailed task analysis report attached.</p>
-      <br>
-      <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
-    `,
-    attachments: [{ 
-      filename: `clickup_report_${new Date().toISOString().split('T')[0]}.pdf`, 
-      path: pdfPath 
-    }],
-  });
-  
-  console.log("✅ Email sent successfully");
-}
-
-module.exports = sendReport;
+async function emailReport(pdfPath, taskCoun
