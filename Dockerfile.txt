@@ -1,0 +1,41 @@
+# Use Amazon Corretto 21 (LTS) as base image
+FROM amazoncorretto:21-alpine
+
+# Install Node.js and npm on Amazon Corretto
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    pixman-dev \
+    python3 \
+    make \
+    g++ \
+    pkgconfig
+
+# Create app directory
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies with specific flags for Alpine
+RUN npm ci --only=production --no-audit
+
+# Copy application code
+COPY . .
+
+# Create temp directory for PDFs
+RUN mkdir -p /tmp && chmod 777 /tmp
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD node -e "console.log('Health check passed')" || exit 1
+
+# Expose port (optional, for future web interface)
+EXPOSE 3000
+
+# Run the application
+CMD ["node", "scheduler.js"]

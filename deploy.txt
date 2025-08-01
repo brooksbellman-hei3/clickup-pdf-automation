@@ -1,0 +1,157 @@
+#!/bin/bash
+
+# deploy.sh - Deployment script for both platforms
+
+set -e
+
+echo "🚀 ClickUp PDF Reporter Deployment Script"
+echo "========================================="
+
+# Function to validate environment
+validate_env() {
+    echo "🔍 Validating environment variables..."
+    
+    required_vars=(
+        "CLICKUP_API_TOKEN"
+        "CLICKUP_LIST_ID" 
+        "SMTP_HOST"
+        "SMTP_PORT"
+        "SMTP_USER"
+        "SMTP_PASS"
+        "EMAIL_TO"
+    )
+    
+    missing_vars=()
+    
+    for var in "${required_vars[@]}"; do
+        if [[ -z "${!var}" ]]; then
+            missing_vars+=("$var")
+        fi
+    done
+    
+    if [[ ${#missing_vars[@]} -gt 0 ]]; then
+        echo "❌ Missing required environment variables:"
+        printf '   - %s\n' "${missing_vars[@]}"
+        echo ""
+        echo "💡 Please set these in your .env file or environment"
+        exit 1
+    fi
+    
+    echo "✅ All required environment variables are set"
+}
+
+# Function for Render deployment
+deploy_render() {
+    echo "☁️  Preparing for Render deployment..."
+    
+    # Check if render.yaml exists
+    if [[ ! -f "render.yaml" ]]; then
+        echo "❌ render.yaml not found!"
+        exit 1
+    fi
+    
+    # Validate package.json
+    if [[ ! -f "package.json" ]]; then
+        echo "❌ package.json not found!"
+        exit 1
+    fi
+    
+    echo "✅ Render configuration validated"
+    echo ""
+    echo "📋 Next steps for Render deployment:"
+    echo "   1. Push your code to GitHub"
+    echo "   2. Connect your GitHub repo to Render"
+    echo "   3. Set environment variables in Render dashboard"
+    echo "   4. Deploy as a Worker Service"
+    echo ""
+    echo "🔗 Render dashboard: https://dashboard.render.com"
+}
+
+# Function for local Docker/Corretto deployment
+deploy_local() {
+    echo "🐳 Preparing for local Docker deployment..."
+    
+    # Check if Docker is installed
+    if ! command -v docker &> /dev/null; then
+        echo "❌ Docker is not installed!"
+        echo "💡 Install Docker: https://docs.docker.com/get-docker/"
+        exit 1
+    fi
+    
+    # Check if docker-compose is available
+    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+        echo "❌ Docker Compose is not available!"
+        exit 1
+    fi
+    
+    echo "✅ Docker environment validated"
+    
+    # Build and run
+    echo "🔨 Building Docker image..."
+    docker build -t clickup-pdf-reporter .
+    
+    echo "🚀 Starting container..."
+    if command -v docker-compose &> /dev/null; then
+        docker-compose up -d
+    else
+        docker compose up -d
+    fi
+    
+    echo "✅ Container started successfully!"
+    echo ""
+    echo "📋 Container management commands:"
+    echo "   View logs: docker-compose logs -f"
+    echo "   Stop:      docker-compose down"
+    echo "   Restart:   docker-compose restart"
+    echo "   Status:    docker-compose ps"
+}
+
+# Function to test the application
+test_app() {
+    echo "🧪 Testing application..."
+    
+    if [[ -f ".env" ]]; then
+        source .env
+    fi
+    
+    validate_env
+    
+    echo "🔄 Running test report..."
+    node scheduler.js --test
+}
+
+# Main deployment logic
+main() {
+    case "${1:-}" in
+        "render")
+            validate_env
+            deploy_render
+            ;;
+        "local"|"docker")
+            validate_env
+            deploy_local
+            ;;
+        "test")
+            test_app
+            ;;
+        *)
+            echo "Usage: $0 {render|local|test}"
+            echo ""
+            echo "Commands:"
+            echo "  render  - Prepare for Render.com deployment"
+            echo "  local   - Deploy locally with Docker"
+            echo "  test    - Run a test report"
+            echo ""
+            echo "Example: $0 local"
+            exit 1
+            ;;
+    esac
+}
+
+# Load environment variables if .env exists
+if [[ -f ".env" ]]; then
+    echo "📄 Loading environment variables from .env"
+    export $(grep -v '^#' .env | xargs)
+fi
+
+main "$@"
