@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
-const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
-const { generatePieChart, generateLineChart } = require('./generateCharts');
+const { fetchClickUpTasks, testClickUpConnection } = require('./fetchdata'); // Fixed case
+const { generatePieChart, generateLineChart } = require('./generatecharts'); // Fixed case
 const createPDF = require('./createPDF');
 const fs = require('fs');
 

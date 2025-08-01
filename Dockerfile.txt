@@ -18,17 +18,21 @@ RUN apk add --no-cache \
 # Create app directory
 WORKDIR /usr/src/app
 
-# Copy package files
+# Copy package files first (for better caching)
 COPY package*.json ./
 
 # Install dependencies with specific flags for Alpine
 RUN npm ci --only=production --no-audit
 
-# Copy application code
-COPY . .
+# Copy all application files
+COPY *.js ./
+COPY .env* ./
 
 # Create temp directory for PDFs
 RUN mkdir -p /tmp && chmod 777 /tmp
+
+# Create logs directory
+RUN mkdir -p logs && chmod 777 logs
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
