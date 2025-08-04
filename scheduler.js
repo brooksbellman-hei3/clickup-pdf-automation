@@ -68,15 +68,15 @@ function startScheduler() {
   console.log("🧪 Test mode: Reports every 2 minutes");
   cron.schedule("*/2 * * * *", async () => {
      console.log("📤 Running test ClickUp report job...");
-  //   try {
-  //     await sendReport();
-  //     console.log("✅ Test report sent!");
-  //   } catch (error) {
-  //     console.error("❌ Test report failed:", error.message);
-  //   }
-  // }, {
-  //   timezone: process.env.TIMEZONE || "America/New_York"
-  // });
+     try {
+       await sendReport();
+       console.log("✅ Test report sent!");
+     } catch (error) {
+       console.error("❌ Test report failed:", error.message);
+     }
+   }, {
+     timezone: process.env.TIMEZONE || "America/New_York"
+   });
 }
 
 // Handle graceful shutdown
