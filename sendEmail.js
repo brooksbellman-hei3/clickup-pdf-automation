@@ -207,13 +207,16 @@ function generateColors(count) {
 async function emailReport(pdfPath, taskCount) {
   console.log("📧 Sending email...");
   
- const transporter = nodemailer.createTransport({
-  service: 'gmail', // or whatever you're using
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true for port 465
   auth: {
     user: process.env.EMAIL_USERNAME,
     pass: process.env.EMAIL_PASSWORD
   }
 });
+
 
 
   // Verify transporter configuration
