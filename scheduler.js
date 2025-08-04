@@ -65,9 +65,9 @@ function startScheduler() {
   });
   
   // Optional: Test schedule (every 2 minutes) - uncomment for testing
-  // console.log("🧪 Test mode: Reports every 2 minutes");
-  // cron.schedule("*/2 * * * *", async () => {
-  //   console.log("📤 Running test ClickUp report job...");
+  console.log("🧪 Test mode: Reports every 2 minutes");
+  cron.schedule("*/2 * * * *", async () => {
+     console.log("📤 Running test ClickUp report job...");
   //   try {
   //     await sendReport();
   //     console.log("✅ Test report sent!");
