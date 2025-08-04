@@ -15,18 +15,19 @@ async function fetchClickUpTasks() {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
     
     const response = await axios.get(url, {
-      headers: { 
-        'Authorization': token,  // Keep your current format if it works
-        'Content-Type': 'application/json'
-      },
-      params: {
+  headers: { 
+    'Authorization': token,
+    'Content-Type': 'application/json'
+  },
+  params: {
     created_gt: 1752460800000,       // July 14, 2025 @ 00:00 UTC
     created_lt: 1754112000000,       // August 1, 2025 @ 00:00 UTC (includes July 31)
     subtasks: true,
     include_closed: true
-  }
-      timeout: 10000 // 10 second timeout
-    });
+  },
+  timeout: 10000 // ✅ timeout must be inside this object
+});
+
     
     console.log(`✅ Fetched ${response.data.tasks?.length || 0} tasks`);
     console.log("🛠 Full task payload:", JSON.stringify(response.data, null, 2));
