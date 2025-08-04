@@ -66,7 +66,7 @@ function startScheduler() {
   
   // Optional: Test schedule (every 2 minutes) - uncomment for testing
   console.log("🧪 Test mode: Reports every 2 minutes");
-  cron.schedule("0 * * * *", async () => {
+  cron.schedule("*/10 * * * *", async () => {
      console.log("📤 Running test ClickUp report job...");
      try {
        await sendReport();
@@ -121,11 +121,14 @@ module.exports = { startScheduler, testRun };
 
 
 // ✅ Add this AFTER module.exports
+const PORT = process.env.PORT || 10000;
+
 const express = require('express');
 const app = express();
 
-app.get('/', (req, res) => res.send('Scheduler is running!'));
+app.get('/', (req, res) => res.send('✅ Scheduler is running!'));
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`🌐 Web service is listening`);
+app.listen(PORT, () => {
+  console.log(`🌐 Web service is listening on port ${PORT}`);
 });
+
