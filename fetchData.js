@@ -19,6 +19,12 @@ async function fetchClickUpTasks() {
         'Authorization': token,  // Keep your current format if it works
         'Content-Type': 'application/json'
       },
+      params: {
+    created_gt: 1752460800000,       // July 14, 2025 @ 00:00 UTC
+    created_lt: 1754112000000,       // August 1, 2025 @ 00:00 UTC (includes July 31)
+    subtasks: true,
+    include_closed: true
+  }
       timeout: 10000 // 10 second timeout
     });
     
