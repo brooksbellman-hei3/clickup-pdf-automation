@@ -9,7 +9,7 @@ async function fetchClickUpTasks() {
     return [];
   }
 
-  const url = `https://api.clickup.com/api/v2/list/${listId}/task?subtasks=true&archieved=true&include_closed-true`;
+  const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=true&subtasks=true&include_closed=true`;
 
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
