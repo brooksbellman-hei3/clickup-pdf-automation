@@ -9,7 +9,7 @@ async function fetchClickUpTasks() {
     return [];
   }
 
-  const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=true&subtasks=true&include_closed=true`;
+  const url = `https://api.clickup.com/api/v2/team/10507825/task?list_ids[]=${listId}&archived=true&subtasks=true`;
 
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
@@ -23,6 +23,7 @@ async function fetchClickUpTasks() {
     });
     
     console.log(`✅ Fetched ${response.data.tasks?.length || 0} tasks`);
+    console.log("🛠 Full task payload:", JSON.stringify(response.data, null, 2));
     return response.data.tasks || [];
     
   } catch (error) {
