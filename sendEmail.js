@@ -1,6 +1,49 @@
 const nodemailer = require('nodemailer');
-const { fetchClickUpTasks, testClickUpConnection } = require('./fetchdata'); // Match actual filename
-const { generatePieChart, generateLineChart } = require('./generatecharts'); // Match actual filename
+
+// Try to import with different possible filenames
+let fetchClickUpTasks, testClickUpConnection;
+let generatePieChart, generateLineChart;
+
+try {
+  // Try lowercase first (based on your original files)
+  const fetchModule = require('./fetchdata');
+  fetchClickUpTasks = fetchModule.fetchClickUpTasks;
+  testClickUpConnection = fetchModule.testClickUpConnection;
+  console.log('✅ Successfully imported fetchdata.js');
+} catch (error) {
+  try {
+    // Try with capital D
+    const fetchModule = require('./fetchData');
+    fetchClickUpTasks = fetchModule.fetchClickUpTasks;
+    testClickUpConnection = fetchModule.testClickUpConnection;
+    console.log('✅ Successfully imported fetchData.js');
+  } catch (error2) {
+    console.error('❌ Could not import fetch module:', error.message);
+    console.error('❌ Also tried fetchData.js:', error2.message);
+    process.exit(1);
+  }
+}
+
+try {
+  // Try lowercase first
+  const chartModule = require('./generatecharts');
+  generatePieChart = chartModule.generatePieChart;
+  generateLineChart = chartModule.generateLineChart;
+  console.log('✅ Successfully imported generatecharts.js');
+} catch (error) {
+  try {
+    // Try with capital C
+    const chartModule = require('./generateCharts');
+    generatePieChart = chartModule.generatePieChart;
+    generateLineChart = chartModule.generateLineChart;
+    console.log('✅ Successfully imported generateCharts.js');
+  } catch (error2) {
+    console.error('❌ Could not import chart module:', error.message);
+    console.error('❌ Also tried generateCharts.js:', error2.message);
+    process.exit(1);
+  }
+}
+
 const createPDF = require('./createPDF');
 const fs = require('fs');
 
