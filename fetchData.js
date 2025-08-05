@@ -9,7 +9,7 @@ async function fetchClickUpTasks() {
     return [];
   }
 
-  const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=false`;
+  const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=false&include_closed=true&subtasks=true`;
   const headers = { 
     'Authorization': token,
     'Content-Type': 'application/json'
