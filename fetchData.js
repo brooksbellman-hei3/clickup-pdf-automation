@@ -187,32 +187,42 @@ async function fetchClickUpTasks(specificListId = null, specificFolderId = null)
     const start = new Date('2025-04-01').getTime();
     const end = new Date('2025-07-31').getTime();
 
-    const filteredTasks = allTasks.filter(task => {
-      const field = task.custom_fields?.find(f => f.name?.toLowerCase() === 'event date');
-      if (!field || !field.value) return false;
+  const filteredTasks = allTasks.filter(task => {
+  const field = task.custom_fields?.find(f => {
+    const name = f.name?.toLowerCase() || '';
+    return name.includes('event') && name.includes('date');
+  });
 
-      // Handle ClickUp date format: { value: { date: "1713052800000" } }
-      let raw = field.value?.date || field.value;
+  if (!field || !field.value) return false;
 
-      // Convert to number
-      let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
+  let raw = field.value?.date || field.value;
+  let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
 
-      // Convert seconds to ms if needed
-      if (timestamp < 1000000000000) {
-        timestamp *= 1000;
-      }
+  if (timestamp < 1000000000000) {
+    timestamp *= 1000; // Convert seconds to ms if needed
+  }
 
-      if (isNaN(timestamp)) return false;
+  if (isNaN(timestamp)) return false;
 
-      const isInRange = timestamp >= start && timestamp <= end;
-      if (isInRange) {
-        console.log(`✅ "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
-      } else {
-        console.log(`❌ "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
-      }
+  const isInRange = timestamp >= start && timestamp <= end;
+  return isInRange;
+});
 
-      return isInRange;
-    });
+  const missedTasks = allTasks.length - filteredTasks.length;
+console.log(`⚠️ ${missedTasks} tasks were excluded by the filter`);
+
+if (missedTasks > 0) {
+  console.log("🔍 Example of skipped tasks (up to 5):");
+  allTasks.slice(0, 5).forEach(task => {
+    const field = task.custom_fields?.find(f => f.name?.toLowerCase().includes('event') && f.name?.toLowerCase().includes('date'));
+    const raw = field?.value?.date || field?.value;
+    let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
+    if (timestamp < 1000000000000) timestamp *= 1000;
+
+    console.log(`   - "${task.name}" → ${new Date(timestamp).toDateString()}`);
+  });
+}
+
 
     console.log(`✅ Tasks matching filter: ${filteredTasks.length}`);
 
