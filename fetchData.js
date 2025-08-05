@@ -31,6 +31,7 @@ while (hasMore) {
 
   const tasks = response.data.tasks || [];
   allTasks = allTasks.concat(tasks);
+  console.log(`📄 Page ${page}: Retrieved ${tasks.length} tasks`);
 
   hasMore = tasks.length === 100; // if fewer than 100 tasks returned, assume it's the last page
   page++;
