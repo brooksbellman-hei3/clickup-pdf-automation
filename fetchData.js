@@ -1,13 +1,14 @@
 const axios = require("axios");
 const { diagnoseClickUpStructure } = require('./diagnostic');
 
-async function fetchClickUpTasks() {
+async function fetchClickUpTasks(specificListId = null, specificFolderId = null) {
   const token = process.env.CLICKUP_API_TOKEN;
   const teamId = process.env.CLICKUP_TEAM_ID;
-  const listId = process.env.CLICKUP_LIST_ID;
+  const listId = specificListId || process.env.CLICKUP_LIST_ID;
+  const folderId = specificFolderId;
 
-  if (!teamId || !token || !listId) {
-    console.error("❌ Missing ClickUp configuration: TEAM_ID, LIST_ID or API_TOKEN");
+  if (!teamId || !token) {
+    console.error("❌ Missing ClickUp configuration: TEAM_ID or API_TOKEN");
     return [];  
   }
 
@@ -17,7 +18,23 @@ async function fetchClickUpTasks() {
   };
 
   try {
-    console.log(`🔗 Fetching tasks from list: ${listId}`);
+    let searchDescription = '';
+    let url = '';
+    
+    if (folderId) {
+      // Search by folder - this will get tasks from all lists in the folder
+      url = `https://api.clickup.com/api/v2/folder/${folderId}/task`;
+      searchDescription = `folder: ${folderId}`;
+    } else if (listId) {
+      // Search by specific list
+      url = `https://api.clickup.com/api/v2/list/${listId}/task`;
+      searchDescription = `list: ${listId}`;
+    } else {
+      console.error("❌ Need either listId or folderId to search");
+      return [];
+    }
+    
+    console.log(`🔗 Fetching tasks from ${searchDescription}`);
     
     const allTasks = [];
     let page = 0;
@@ -28,18 +45,19 @@ async function fetchClickUpTasks() {
       try {
         console.log(`📡 Fetching page ${page}... (${allTasks.length} tasks so far)`);
         
-        // Use proper ClickUp API endpoint for getting tasks from a specific list
-        const url = `https://api.clickup.com/api/v2/list/${listId}/task`;
-        
         const response = await axios.get(url, {
           headers,
           params: {
-            archived: false,
-            include_closed: true,
-            subtasks: true,
+            // More comprehensive parameters to ensure we get ALL tasks
+            archived: true,           // Include archived tasks
+            include_closed: true,     // Include closed tasks
+            subtasks: true,          // Include subtasks
+            include_markdown_description: false,
             page: page,
             order_by: 'created',
-            reverse: true
+            reverse: false,          // Start with oldest first for more consistent pagination
+            statuses: ['to do', 'complete', 'in progress', 'review'], // Include common statuses
+            // Remove any date filters that might be excluding tasks
           },
           timeout: 30000
         });
@@ -243,6 +261,28 @@ async function fetchClickUpTasks() {
   }
 }
 
+// Function to fetch tasks from multiple lists or folders
+async function fetchTasksFromMultipleSources(sources) {
+  const allTasks = [];
+  
+  for (const source of sources) {
+    console.log(`\n🎯 Fetching from ${source.type}: ${source.name} (ID: ${source.id})`);
+    
+    let tasks = [];
+    if (source.type === 'list') {
+      tasks = await fetchClickUpTasks(source.id, '115513192');
+    } else if (source.type === 'folder') {
+      tasks = await fetchClickUpTasks(null, '115513192');
+    }
+    
+    console.log(`📊 Found ${tasks.length} tasks in ${source.name}`);
+    allTasks.push(...tasks);
+  }
+  
+  console.log(`\n✅ Total tasks from all sources: ${allTasks.length}`);
+  return allTasks;
+}
+
 // Alternative function to fetch ALL tasks from multiple lists if needed
 async function fetchAllClickUpTasks() {
   const token = process.env.CLICKUP_API_TOKEN;
@@ -360,4 +400,9 @@ async function testClickUpConnection() {
   }
 }
 
-module.exports = { fetchClickUpTasks, fetchAllClickUpTasks, testClickUpConnection };
+module.exports = { 
+  fetchClickUpTasks, 
+  fetchAllClickUpTasks, 
+  fetchTasksFromMultipleSources,
+  testClickUpConnection 
+};
