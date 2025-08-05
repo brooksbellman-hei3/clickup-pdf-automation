@@ -18,13 +18,26 @@ async function fetchClickUpTasks() {
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
     
-    const response = await axios.get(url, { 
-      headers,
-      timeout: 15000
-    });
-    
-    const allTasks = response.data.tasks || [];
-    console.log(`✅ Fetched ${allTasks.length} tasks`);
+    let allTasks = [];
+let page = 0;
+let hasMore = true;
+
+while (hasMore) {
+  const pagedUrl = `${url}&page=${page}`;
+  const response = await axios.get(pagedUrl, {
+    headers,
+    timeout: 15000
+  });
+
+  const tasks = response.data.tasks || [];
+  allTasks = allTasks.concat(tasks);
+
+  hasMore = tasks.length === 100; // if fewer than 100 tasks returned, assume it's the last page
+  page++;
+}
+
+console.log(`✅ Total fetched: ${allTasks.length} tasks`);
+
 
     // 🔍 DEBUG: Show all custom field names in the first few tasks
     console.log("\n🔍 DEBUGGING CUSTOM FIELDS:");
