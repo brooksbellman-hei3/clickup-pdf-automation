@@ -9,8 +9,7 @@ async function fetchClickUpTasks() {
     return [];
   }
 
-  // Simple approach: get a large batch without pagination
-  const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=false&limit=1000`;
+  const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=false&limit=100`;
   const headers = { 
     'Authorization': token,
     'Content-Type': 'application/json'
@@ -21,63 +20,146 @@ async function fetchClickUpTasks() {
     
     const response = await axios.get(url, { 
       headers,
-      timeout: 15000 // 15 second timeout
+      timeout: 15000
     });
     
     const allTasks = response.data.tasks || [];
     console.log(`✅ Fetched ${allTasks.length} tasks`);
 
-    // ✅ Filter tasks by Event Date custom field
-    const start = new Date('2025-07-10').getTime();
-    const end = new Date('2025-07-31').getTime();
+    // 🔍 DEBUG: Show all custom field names in the first few tasks
+    console.log("\n🔍 DEBUGGING CUSTOM FIELDS:");
+    allTasks.slice(0, 3).forEach((task, index) => {
+      console.log(`\n📋 Task ${index + 1}: "${task.name}"`);
+      console.log(`   Custom fields (${task.custom_fields?.length || 0} total):`);
+      
+      if (task.custom_fields && task.custom_fields.length > 0) {
+        task.custom_fields.forEach(field => {
+          console.log(`   - "${field.name}": ${field.value} (type: ${field.type})`);
+        });
+      } else {
+        console.log("   - No custom fields found");
+      }
+    });
 
-    console.log(`🔍 Filtering tasks between ${new Date(start).toDateString()} and ${new Date(end).toDateString()}`);
+    // 🔍 DEBUG: Look for all possible Event Date variations
+    console.log("\n🔍 SEARCHING FOR EVENT DATE FIELDS:");
+    const eventDateVariations = [];
+    allTasks.forEach(task => {
+      task.custom_fields?.forEach(field => {
+        if (field.name.toLowerCase().includes('event') || 
+            field.name.toLowerCase().includes('date')) {
+          eventDateVariations.push({
+            name: field.name,
+            value: field.value,
+            type: field.type
+          });
+        }
+      });
+    });
 
-    const filteredTasks = allTasks.filter(task => {
-      // Find the Event Date custom field
+    // Remove duplicates and show unique field names
+    const uniqueFields = [...new Map(eventDateVariations.map(item => [item.name, item])).values()];
+    uniqueFields.forEach(field => {
+      console.log(`   Found: "${field.name}" = ${field.value} (type: ${field.type})`);
+    });
+
+    // 🔍 Let's try different date ranges to see what we find
+    console.log("\n🔍 TESTING DIFFERENT DATE RANGES:");
+    
+    // Try a very wide range first (all of 2024 and 2025)
+    const veryStart = new Date('2024-01-01').getTime();
+    const veryEnd = new Date('2025-12-31').getTime();
+    
+    console.log(`Wide range: ${new Date(veryStart).toDateString()} to ${new Date(veryEnd).toDateString()}`);
+
+    const wideFilterTasks = allTasks.filter(task => {
       const eventField = task.custom_fields?.find(field => {
-        return field.name === "Event Date" || 
-               field.name?.toLowerCase() === "event date";
+        const lowerName = field.name?.toLowerCase() || '';
+        return lowerName.includes('event') && lowerName.includes('date');
       });
 
       if (!eventField || !eventField.value) {
         return false;
       }
 
-      // Parse the timestamp
       let timestamp = parseInt(eventField.value);
-      
-      // If very small number, might be in seconds - convert to milliseconds
       if (timestamp < 1000000000000) {
         timestamp = timestamp * 1000;
       }
-      
-      // If parsing failed, try as date string
+
       if (isNaN(timestamp)) {
         timestamp = new Date(eventField.value).getTime();
       }
 
-      if (!timestamp || isNaN(timestamp)) {
+      const isInWideRange = timestamp >= veryStart && timestamp <= veryEnd;
+      
+      if (isInWideRange) {
+        console.log(`   ✅ Found: "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
+      }
+
+      return isInWideRange;
+    });
+
+    console.log(`📊 Wide range found: ${wideFilterTasks.length} tasks`);
+
+    // Now try your original range
+    const start = new Date('2025-04-01').getTime();
+    const end = new Date('2025-07-31').getTime();
+
+    console.log(`\n🎯 Your original range: ${new Date(start).toDateString()} to ${new Date(end).toDateString()}`);
+
+    const filteredTasks = allTasks.filter(task => {
+      const eventField = task.custom_fields?.find(field => {
+        const lowerName = field.name?.toLowerCase() || '';
+        return lowerName.includes('event') && lowerName.includes('date');
+      });
+
+      if (!eventField || !eventField.value) {
         return false;
       }
 
-      return timestamp >= start && timestamp <= end;
+      let timestamp = parseInt(eventField.value);
+      if (timestamp < 1000000000000) {
+        timestamp = timestamp * 1000;
+      }
+
+      if (isNaN(timestamp)) {
+        timestamp = new Date(eventField.value).getTime();
+      }
+
+      const isInRange = timestamp >= start && timestamp <= end;
+      
+      if (eventField) {
+        const dateStr = isNaN(timestamp) ? 'Invalid' : new Date(timestamp).toDateString();
+        console.log(`   ${isInRange ? '✅' : '❌'} "${task.name}" - Date: ${dateStr}`);
+      }
+
+      return isInRange;
     });
 
-    console.log(`📎 Filtered down to ${filteredTasks.length} tasks based on Event Date`);
-    
-    // Show which tasks were selected (first 5)
-    if (filteredTasks.length > 0) {
-      console.log("📋 Selected tasks:");
-      filteredTasks.slice(0, 5).forEach(task => {
-        const eventField = task.custom_fields?.find(f => 
-          f.name === "Event Date" || f.name?.toLowerCase() === "event date"
-        );
-        const date = eventField ? new Date(parseInt(eventField.value) * (parseInt(eventField.value) < 1000000000000 ? 1000 : 1)).toDateString() : 'No date';
-        console.log(`  - ${task.name} (${date})`);
-      });
-      if (filteredTasks.length > 5) {
-        console.log(`  ... and ${filteredTasks.length - 5} more`);
+    console.log(`\n📎 Final filtered result: ${filteredTasks.length} tasks`);
+
+    // If no tasks found, show some suggestions
+    if (filteredTasks.length === 0 && allTasks.length > 0) {
+      console.log("\n💡 SUGGESTIONS:");
+      console.log("1. Check if the custom field name is exactly 'Event Date'");
+      console.log("2. Verify your date range (April 1 - July 31, 2025)");
+      console.log("3. Check if dates are stored in a different format");
+      
+      // Show what dates we actually found
+      if (wideFilterTasks.length > 0) {
+        console.log("4. Here are the actual dates found in your tasks:");
+        wideFilterTasks.slice(0, 5).forEach(task => {
+          const eventField = task.custom_fields?.find(field => {
+            const lowerName = field.name?.toLowerCase() || '';
+            return lowerName.includes('event') && lowerName.includes('date');
+          });
+          if (eventField) {
+            let timestamp = parseInt(eventField.value);
+            if (timestamp < 1000000000000) timestamp = timestamp * 1000;
+            console.log(`   - "${task.name}": ${new Date(timestamp).toDateString()}`);
+          }
+        });
       }
     }
 
@@ -85,14 +167,12 @@ async function fetchClickUpTasks() {
 
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:");
-    
     if (error.response) {
       console.error(`Status: ${error.response.status}`);
       console.error(`Data: ${JSON.stringify(error.response.data)}`);
     } else {
       console.error(`Error: ${error.message}`);
     }
-    
     return [];
   }
 }
@@ -106,7 +186,6 @@ async function testClickUpConnection() {
   }
 
   try {
-    // Test with user endpoint first
     const response = await axios.get('https://api.clickup.com/api/v2/user', {
       headers: { 
         'Authorization': token,
