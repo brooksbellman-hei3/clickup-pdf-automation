@@ -270,7 +270,7 @@ async function fetchTasksFromMultipleSources(sources) {
     
     let tasks = [];
     if (source.type === 'list') {
-      tasks = await fetchClickUpTasks(source.id, '115513192');
+      tasks = await fetchClickUpTasks(null, '49761976');
     } else if (source.type === 'folder') {
       tasks = await fetchClickUpTasks(null, '115513192');
     }
