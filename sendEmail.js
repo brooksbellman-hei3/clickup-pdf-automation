@@ -56,7 +56,7 @@ async function sendReport() {
     throw new Error("ClickUp API connection failed");
   }
 
-  const tasks = await fetchClickUpTasks(null, '115513192');
+  const tasks = await fetchClickUpTasks();
   if (tasks.length === 0) {
     console.log("⚠️ No tasks found - skipping report");
     return;
