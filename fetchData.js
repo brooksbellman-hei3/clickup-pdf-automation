@@ -19,10 +19,9 @@ const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=t
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
     
-    let allTasks = [];
+let allTasks = [];
 let page = 0;
 let hasMore = true;
-let tasks = [];
 
 while (hasMore) {
   const pagedUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=100&page=${page}`;
@@ -39,7 +38,7 @@ while (hasMore) {
 
     const data = await response.json();
     console.log(`📄 Page ${page}: Retrieved ${data.tasks.length} tasks`);
-    tasks = tasks.concat(data.tasks);
+    alltasks = alltasks.concat(data.tasks);
     hasMore = data.tasks.length === 100;
     page++;
 
