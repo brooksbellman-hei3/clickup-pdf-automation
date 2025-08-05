@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 async function fetchClickUpTasks() {
- const token = process.env.CLICKUP_API_TOKEN;
+const token = process.env.CLICKUP_API_TOKEN;
 const teamId = process.env.CLICKUP_TEAM_ID;
 const listId = process.env.CLICKUP_LIST_ID;
 
@@ -10,7 +10,7 @@ if (!teamId || !token || !listId) {
   return [];
 }
 
-const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true`;
+const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&list_ids[]=${listId}`;
   const headers = { 
     'Authorization': token,
     'Content-Type': 'application/json'
@@ -19,17 +19,20 @@ const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=t
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
     
-let allTasks = [];
 let page = 0;
+const perPage = 100;
 let hasMore = true;
+const allTasks = [];
+
+const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&list_ids[]=${listId}&limit=${perPage}`;
 
 while (hasMore) {
-  const pagedUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=100&page=${page}`;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30 sec timeout
+  const pagedUrl = `${baseUrl}&page=${page}`;
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30 sec timeout
+
     const response = await fetch(pagedUrl, {
       headers,
       signal: controller.signal
@@ -37,13 +40,14 @@ while (hasMore) {
     clearTimeout(timeout);
 
     const data = await response.json();
-    console.log(`📄 Page ${page}: Retrieved ${data.tasks.length} tasks`);
-    allTasks = allTasks.concat(data.tasks);
-    hasMore = data.tasks.length === 100;
-    page++;
+    const batch = data.tasks || [];
 
+    console.log(`📄 Page ${page}: Retrieved ${batch.length} tasks`);
+    allTasks.push(...batch);
+
+    hasMore = batch.length === perPage;
+    page++;
   } catch (error) {
-    clearTimeout(timeout);
     console.error("❌ Error fetching ClickUp tasks:", error.message);
     break;
   }
