@@ -9,24 +9,21 @@ async function fetchClickUpTasks() {
     return [];
   }
 
-  const url = `https://api.clickup.com/api/v2/team/10507825/task?list_ids[]=${listId}&archived=true&subtasks=true`;
+   const startDate = new Date('2025-07-14').getTime();
+  const endDate = new Date('2025-07-31').getTime();
+
+  const url = `https://api.clickup.com/api/v2/list/${listId}/task?date_created_gt=${startDate}&date_created_lt=${endDate}&archived=false`;
 
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
     
     const response = await axios.get(url, {
-  headers: { 
-    'Authorization': token,
-    'Content-Type': 'application/json'
-  },
-  params: {
-    created_gt: 1752460800000,       // July 14, 2025 @ 00:00 UTC
-    created_lt: 1754112000000,       // August 1, 2025 @ 00:00 UTC (includes July 31)
-    subtasks: true,
-    include_closed: true
-  },
-  timeout: 10000 // ✅ timeout must be inside this object
-});
+      headers: { 
+        'Authorization': token,
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
+    });
 
     
     console.log(`✅ Fetched ${response.data.tasks?.length || 0} tasks`);
