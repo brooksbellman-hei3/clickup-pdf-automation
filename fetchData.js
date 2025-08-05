@@ -133,12 +133,15 @@ console.log(`✅ Total fetched: ${allTasks.length} tasks`);
     return false;
   }
 
-  let timestamp = parseInt(rawTimestamp);
+  const rawTimestamp = eventField?.value?.date;
+if (!rawTimestamp || isNaN(rawTimestamp)) {
+  return false;
+}
+let timestamp = parseInt(rawTimestamp);
+if (timestamp < 1000000000000) {
+  timestamp = timestamp * 1000;
+}
 
-  // ⏱ ClickUp sometimes stores timestamps in seconds — adjust if necessary
-  if (timestamp < 1000000000000) {
-    timestamp = timestamp * 1000;
-  }
 
   const isInWideRange = timestamp >= veryStart && timestamp <= veryEnd;
 
@@ -170,12 +173,15 @@ console.log(`✅ Total fetched: ${allTasks.length} tasks`);
     return false;
   }
 
-  let timestamp = parseInt(rawTimestamp);
+  const rawTimestamp = eventField?.value?.date;
+if (!rawTimestamp || isNaN(rawTimestamp)) {
+  return false;
+}
+let timestamp = parseInt(rawTimestamp);
+if (timestamp < 1000000000000) {
+  timestamp = timestamp * 1000;
+}
 
-  // 🕒 Normalize seconds if needed
-  if (timestamp < 1000000000000) {
-    timestamp = timestamp * 1000;
-  }
 
   const isInRange = timestamp >= start && timestamp <= end;
 
@@ -204,8 +210,15 @@ console.log(`✅ Total fetched: ${allTasks.length} tasks`);
             return lowerName.includes('event') && lowerName.includes('date');
           });
           if (eventField) {
-            let timestamp = parseInt(eventField.value);
-            if (timestamp < 1000000000000) timestamp = timestamp * 1000;
+            const rawTimestamp = eventField?.value?.date;
+if (!rawTimestamp || isNaN(rawTimestamp)) {
+  return false;
+}
+let timestamp = parseInt(rawTimestamp);
+if (timestamp < 1000000000000) {
+  timestamp = timestamp * 1000;
+}
+
             console.log(`   - "${task.name}": ${new Date(timestamp).toDateString()}`);
           }
         });
