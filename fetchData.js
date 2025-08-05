@@ -9,7 +9,7 @@ async function fetchClickUpTasks() {
     return [];
   }
 
-   const startDate = new Date('2025-07-14').getTime();
+   const startDate = new Date('2025-04-01').getTime();
   const endDate = new Date('2025-07-31').getTime();
 
   const url = `https://api.clickup.com/api/v2/list/${listId}/task?date_created_gt=${startDate}&date_created_lt=${endDate}&archived=false`;
