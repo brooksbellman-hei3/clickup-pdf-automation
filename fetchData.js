@@ -19,16 +19,14 @@ if (!teamId || !token || !listId) {
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
     
+const baseUrl = `https://api.clickup.com/api/v2/list/${listId}/task`;
 let page = 0;
 const perPage = 100;
 let hasMore = true;
-let latestTimestamp = Date.now(); // start with now
 const allTasks = [];
 
-const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
-    
 while (hasMore) {
-  const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=true&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
+  const url = `${baseUrl}?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&page=${page}&limit=${perPage}`;
 
   try {
     const controller = new AbortController();
@@ -43,28 +41,15 @@ while (hasMore) {
     const data = await response.json();
     const batch = data.tasks || [];
 
-    console.log(`📄 Retrieved ${batch.length} tasks before ${new Date(latestTimestamp).toISOString()}`);
-
-    batch.forEach(task => {
-      console.log(`   🕒 "${task.name}" - Created: ${new Date(Number(task.date_created)).toISOString()}`);
-    });
+    console.log(`📄 Retrieved ${batch.length} tasks from page ${page}`);
 
     allTasks.push(...batch);
 
     if (batch.length < perPage) {
       hasMore = false;
     } else {
-      const oldest = batch.reduce((prev, curr) =>
-        (curr.date_created < prev.date_created) ? curr : prev
-      );
-
-      if (oldest?.date_created) {
-        latestTimestamp = parseInt(oldest.date_created) - 1;
-      } else {
-        console.warn("⚠️ No valid date_created found in batch, stopping pagination.");
-        hasMore = false;
-      }
-    } // ✅ This was the missing closing brace for `try`
+      page++; // move to next page
+    }
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:", error.message);
     break;
