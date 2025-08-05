@@ -9,36 +9,43 @@ async function fetchClickUpTasks() {
     return [];
   }
 
-  const headers = {
-    Authorization: token,
-  };
-
   const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=false`;
+  const headers = { Authorization: token };
+  let tasks = [];
 
   try {
-    const response = await axios.get(url, { headers });
-    const tasks = response.data.tasks || [];
+    let page = 0;
+    let hasMore = true;
 
-    const filteredTasks = tasks.filter((task) => {
-      const eventDateField = task.custom_fields?.find(
-        (field) => field.name === "Event Date" && field.value
-      );
+    while (hasMore) {
+      const response = await fetch(`${url}&page=${page}`, { headers });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`ClickUp API error (${response.status}): ${errorText}`);
+      }
 
-      if (!eventDateField) return false;
+      const data = await response.json();
+      tasks = tasks.concat(data.tasks);
+      hasMore = !data.last_page;
+      page++;
+    }
 
-      const timestamp = Number(eventDateField.value);
-      const eventDate = new Date(timestamp);
+    // ✅ Filter tasks by Event Date custom field (milliseconds since epoch)
+    const start = new Date('2025-07-10').getTime();
+    const end = new Date('2025-07-31').getTime();
 
-      const start = new Date("2025-07-01");
-      const end = new Date("2025-07-31");
-
-      return eventDate >= start && eventDate <= end;
+    const filtered = tasks.filter(task => {
+      const eventField = task.custom_fields?.find(f => f.name === "Event Date");
+      const timestamp = eventField?.value;
+      return timestamp && timestamp >= start && timestamp <= end;
     });
 
-    console.log(`✅ Fetched ${filteredTasks.length} tasks after filtering by Event Date`);
-    return filteredTasks;
+    console.log(`✅ Fetched ${tasks.length} tasks`);
+    console.log(`📎 Filtered down to ${filtered.length} tasks based on Event Date`);
+    return filtered;
+
   } catch (error) {
-    console.error("❌ Error fetching tasks from ClickUp:", error.message);
+    console.error("❌ Failed to fetch tasks:", error.message);
     return [];
   }
 }
