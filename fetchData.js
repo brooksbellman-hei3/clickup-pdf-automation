@@ -22,18 +22,19 @@ const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=t
 let page = 0;
 const perPage = 100;
 let hasMore = true;
+let latestTimestamp = Date.now(); // start with now
 const allTasks = [];
 
-const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}`;
+const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=updated&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_updated_lt=${latestTimestamp}`;
     
 while (hasMore) {
-  const pagedUrl = `${baseUrl}&page=${page}`;
+  const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=updated&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_updated_lt=${latestTimestamp}`;
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000); // 30 sec timeout
 
-    const response = await fetch(pagedUrl, {
+    const response = await fetch(url, {
       headers,
       signal: controller.signal
     });
@@ -42,11 +43,18 @@ while (hasMore) {
     const data = await response.json();
     const batch = data.tasks || [];
 
-    console.log(`📄 Page ${page}: Retrieved ${batch.length} tasks`);
+    console.log(`📄 Retrieved ${batch.length} tasks before ${new Date(latestTimestamp).toISOString()}`);
     allTasks.push(...batch);
 
-    hasMore = batch.length === perPage;
-    page++;
+    if (batch.length < perPage) {
+      hasMore = false;
+    } else {
+      // Find the oldest updated task to paginate next
+      const oldest = batch.reduce((prev, curr) => {
+        return (curr.date_updated < prev.date_updated) ? curr : prev;
+      });
+      latestTimestamp = parseInt(oldest.date_updated);
+    }
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:", error.message);
     break;
