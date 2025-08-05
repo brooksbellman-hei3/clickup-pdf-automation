@@ -184,8 +184,9 @@ async function fetchClickUpTasks(specificListId = null, specificFolderId = null)
     console.log(`🎯 Your original range: 2025-04-01 to 2025-07-31`);
     console.log(`🔍 Filtering by Event Date custom field...`);
 
-    const start = new Date('2025-04-01').getTime();
-    const end = new Date('2025-07-31').getTime();
+    const start = Date.UTC(2025, 3, 1); // April 1, 2025
+    const end = Date.UTC(2025, 6, 31, 23, 59, 59); // July 31, 2025 at end of day
+
 
   const filteredTasks = allTasks.filter(task => {
   const field = task.custom_fields?.find(f => {
