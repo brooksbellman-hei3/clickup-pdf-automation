@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { diagnoseClickUpStructure } = require('./diagnostic');
 
 async function fetchClickUpTasks() {
 const token = process.env.CLICKUP_API_TOKEN;
@@ -7,7 +8,7 @@ const listId = process.env.CLICKUP_LIST_ID;
 
 if (!teamId || !token || !listId) {
   console.error("❌ Missing ClickUp configuration: TEAM_ID, LIST_ID or API_TOKEN");
-  return [];
+  return [];  
 }
 
 const headers = { 
@@ -79,6 +80,13 @@ try {
       console.error("❌ Error fetching ClickUp tasks:", error.message);
       break;
     }
+   console.log(`✅ Total fetched: ${allTasks.length} tasks`); 
+    if (allTasks.length <= 10) { // Only run diagnostic if we got few tasks
+    console.log('\n🔍 Running diagnostic to find more tasks...');
+    await diagnoseClickUpStructure();
+  }
+  
+  return filteredTasks;
   }
 
   console.log(`✅ Total fetched: ${allTasks.length} tasks`);
