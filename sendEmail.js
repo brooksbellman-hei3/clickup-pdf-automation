@@ -208,14 +208,15 @@ async function emailReport(pdfPath, taskCount) {
   console.log("📧 Sending email...");
   
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true for port 465
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT, 10),
+  secure: process.env.SMTP_PORT === "465", // true for port 465, false for 587
   auth: {
-    user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
   }
 });
+
 
 
 
