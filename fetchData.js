@@ -25,7 +25,7 @@ let hasMore = true;
 let latestTimestamp = Date.now(); // start with now
 const allTasks = [];
 
-const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=updated&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_updated_lt=${latestTimestamp}`;
+const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
     
 while (hasMore) {
   const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=updated&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_updated_lt=${latestTimestamp}`;
@@ -53,7 +53,7 @@ while (hasMore) {
       const oldest = batch.reduce((prev, curr) => {
         return (curr.date_updated < prev.date_updated) ? curr : prev;
       });
-      latestTimestamp = parseInt(oldest.date_updated);
+      latestTimestamp = parseInt(oldest.date_created);
     }
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:", error.message);
