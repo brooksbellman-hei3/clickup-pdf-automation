@@ -68,7 +68,9 @@ if (oldest?.date_created) {
   console.warn("⚠️ No valid date_created found in batch, stopping pagination.");
   hasMore = false;
 }
-  } catch (error) {
+  } // ✅ CLOSE try block here
+  catch (error) {
+
     console.error("❌ Error fetching ClickUp tasks:", error.message);
     break;
   }
