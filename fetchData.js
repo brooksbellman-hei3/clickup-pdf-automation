@@ -31,17 +31,16 @@ async function fetchClickUpTasks() {
     }
 
     // ✅ Filter tasks by Event Date custom field (milliseconds since epoch)
-    const start = new Date('2025-07-10').getTime();
-    const end = new Date('2025-07-31').getTime();
+    // After accumulating all tasks in `tasks`
+const start = new Date('2025-04-01').getTime();
+const end = new Date('2025-07-31').getTime();
 
-    const filtered = tasks.filter(task => {
-      const eventField = task.custom_fields?.find(f => f.name === "Event Date");
-
-      if (!eventField || !eventField.value) return false;
-
-      const timestamp = Number(eventField.value);
-      return timestamp >= start && timestamp <= end;
+const filtered = tasks.filter(task => {
+  const eventField = task.custom_fields?.find(f => f.name === "Event Date");
+  const timestamp = parseInt(eventField?.value);
+  return timestamp && timestamp >= start && timestamp <= end;
 });
+
 
 
     console.log(`✅ Fetched ${tasks.length} tasks`);
