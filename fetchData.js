@@ -10,7 +10,7 @@ if (!teamId || !token || !listId) {
   return [];
 }
 
-const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=true&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
+//const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=true&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
   const headers = { 
     'Authorization': token,
     'Content-Type': 'application/json'
