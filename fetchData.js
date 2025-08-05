@@ -127,7 +127,7 @@ console.log(`✅ Total fetched: ${allTasks.length} tasks`);
   });
 
   // 🔍 Ensure field and value exist
-const rawTimestamp = eventField?.value?.date;
+const rawTimestamp = eventField?.value;
 if (!rawTimestamp || isNaN(rawTimestamp)) {
   return false;
 }
@@ -161,7 +161,7 @@ if (timestamp < 1000000000000) {
         return lowerName.includes('event') && lowerName.includes('date');
   });
 
-const rawTimestamp = eventField?.value?.date;
+const rawTimestamp = eventField?.value;
 if (!rawTimestamp || isNaN(rawTimestamp)) {
   return false;
 }
@@ -198,7 +198,7 @@ if (timestamp < 1000000000000) {
             return lowerName.includes('event') && lowerName.includes('date');
           });
           if (eventField) {
-            const rawTimestamp = eventField?.value?.date;
+            const rawTimestamp = eventField?.value;
 if (!rawTimestamp || isNaN(rawTimestamp)) {
   return false;
 }
