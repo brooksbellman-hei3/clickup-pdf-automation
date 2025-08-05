@@ -3,36 +3,70 @@ const axios = require('axios');
 async function fetchClickUpTasks() {
   const listId = process.env.CLICKUP_LIST_ID;
   const token = process.env.CLICKUP_API_TOKEN;
-  
+
   if (!listId || !token) {
     console.error("❌ Missing ClickUp configuration: LIST_ID or API_TOKEN");
     return [];
   }
 
-   const startDate = new Date('2025-04-01').getTime();
-  const endDate = new Date('2025-07-31').getTime();
-
-  const url = `https://api.clickup.com/api/v2/list/${listId}/task?date_created_gt=${startDate}&date_created_lt=${endDate}&archived=false`;
+  const allTasks = [];
+  let page = 0;
+  const pageSize = 100;
 
   try {
-    console.log(`🔗 Fetching tasks from list: ${listId}`);
-    
-    const response = await axios.get(url, {
-      headers: { 
-        'Authorization': token,
-        'Content-Type': 'application/json'
-      },
-      timeout: 10000
+    while (true) {
+      const url = `https://api.clickup.com/api/v2/list/${listId}/task?page=${page}&include_subtasks=true`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: token
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`❌ Failed to fetch tasks: ${response.statusText}`);
+        break;
+      }
+
+      const data = await response.json();
+      const tasks = data.tasks || [];
+
+      allTasks.push(...tasks);
+
+      if (data.last_page || tasks.length < pageSize) {
+        break;
+      }
+
+      page++;
+    }
+
+    // Convert and filter tasks by Event Date custom field
+    const filteredTasks = allTasks.filter(task => {
+      const field = task.custom_fields?.find(f => f.name === "Event Date");
+      if (!field || !field.value) return false;
+
+      try {
+        const timestamp = Number(field.value);
+        const eventDate = new Date(timestamp);
+        const start = new Date("2025-04-01");
+        const end = new Date("2025-07-31");
+
+        return eventDate >= start && eventDate <= end;
+      } catch (e) {
+        console.warn(`⚠️ Could not parse Event Date for task: ${task.name}`);
+        return false;
+      }
     });
 
-    
-    console.log(`✅ Fetched ${response.data.tasks?.length || 0} tasks`);
-    console.log("🛠 Full task payload:", JSON.stringify(response.data, null, 2));
-    return response.data.tasks || [];
-    
+    console.log(`✅ Fetched ${filteredTasks.length} tasks after filtering by Event Date`);
+    return filteredTasks;
+
   } catch (error) {
-    console.error("❌ Error fetching ClickUp tasks:");
-    
+    console.error("❌ Error fetching tasks:", error.message);
+    return [];
+  }
+}
+
     if (error.response) {
       console.error(`Status: ${error.response.status}`);
       console.error(`Data: ${JSON.stringify(error.response.data)}`);
