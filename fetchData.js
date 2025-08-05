@@ -43,37 +43,32 @@ while (hasMore) {
     const data = await response.json();
     const batch = data.tasks || [];
 
-console.log(`📄 Retrieved ${batch.length} tasks before ${new Date(latestTimestamp).toISOString()}`);
-
-// 🕒 DEBUG each task's date_created
-batch.forEach(task => {
-  console.log(`   🕒 "${task.name}" - Created: ${new Date(Number(task.date_created)).toISOString()}`);
-});
-
-
     console.log(`📄 Retrieved ${batch.length} tasks before ${new Date(latestTimestamp).toISOString()}`);
+
+    batch.forEach(task => {
+      console.log(`   🕒 "${task.name}" - Created: ${new Date(Number(task.date_created)).toISOString()}`);
+    });
+
     allTasks.push(...batch);
 
     if (batch.length < perPage) {
       hasMore = false;
     } else {
-      // Find the oldest updated task to paginate next
       const oldest = batch.reduce((prev, curr) =>
-  (curr.date_created < prev.date_created) ? curr : prev
-);
+        (curr.date_created < prev.date_created) ? curr : prev
+      );
 
-if (oldest?.date_created) {
-  latestTimestamp = parseInt(oldest.date_created) - 1; // ✅ subtract 1ms
-} else {
-  console.warn("⚠️ No valid date_created found in batch, stopping pagination.");
-  hasMore = false;
-}
-  } // ✅ This closes the try block
-  catch (error) {
+      if (oldest?.date_created) {
+        latestTimestamp = parseInt(oldest.date_created) - 1;
+      } else {
+        console.warn("⚠️ No valid date_created found in batch, stopping pagination.");
+        hasMore = false;
+      }
+    } // ✅ This was the missing closing brace for `try`
+  } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:", error.message);
     break;
   }
-
 }
 
 console.log(`✅ Total fetched: ${allTasks.length} tasks`);
