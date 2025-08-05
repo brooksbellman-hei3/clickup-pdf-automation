@@ -24,7 +24,7 @@ const perPage = 100;
 let hasMore = true;
 const allTasks = [];
 
-const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}`;
+const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&statuses[]=open&statuses[]=in progress&statuses[]=complete`;
 
 while (hasMore) {
   const pagedUrl = `${baseUrl}&page=${page}`;
