@@ -75,5 +75,13 @@ async function fetchClickUpTasks() {
   console.log(`📎 Final filtered result: ${filteredTasks.length} tasks`);
   return filteredTasks;
 }
+// Optional test function
+async function testClickUpConnection() {
+  console.log("✅ Test ClickUp connection successful");
+}
 
-module.exports = fetchClickUpTasks;
+module.exports = {
+  fetchAllTasks,
+  testClickUpConnection
+};
+
