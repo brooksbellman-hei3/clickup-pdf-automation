@@ -19,18 +19,18 @@ if (!teamId || !token || !listId) {
   try {
     console.log(`🔗 Fetching tasks from list: ${listId}`);
     
-const baseUrl = `https://api.clickup.com/api/v2/list/${listId}/task`;
+const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task`;
 let page = 0;
 const perPage = 100;
 let hasMore = true;
 const allTasks = [];
 
 while (hasMore) {
-  const url = `${baseUrl}?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&page=${page}&limit=${perPage}`;
-
+  const url = `${baseUrl}?include_closed=true&subtasks=true&archived=true&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&page=${page}`;
+  
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30 sec timeout
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     const response = await fetch(url, {
       headers,
@@ -42,19 +42,19 @@ while (hasMore) {
     const batch = data.tasks || [];
 
     console.log(`📄 Retrieved ${batch.length} tasks from page ${page}`);
-
     allTasks.push(...batch);
 
     if (batch.length < perPage) {
       hasMore = false;
     } else {
-      page++; // move to next page
+      page++;
     }
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:", error.message);
     break;
   }
 }
+
 
 console.log(`✅ Total fetched: ${allTasks.length} tasks`);
 
@@ -138,34 +138,25 @@ if (timestamp < 1000000000000) {
     const start = new Date('2025-04-01').getTime();
     const end = new Date('2025-07-31').getTime();
 
-    console.log(`\n🎯 Your original range: ${new Date(start).toDateString()} to ${new Date(end).toDateString()}`);
+    console.log(`🎯 Your original range: 2025-04-01 to 2025-07-31`);
+    console.log(`🔍 Filtering by Event Date custom field...`);
 
-    const filteredTasks = allTasks.filter(task => {
-      const eventField = task.custom_fields?.find(field => {
-        const lowerName = field.name?.toLowerCase() || '';
-        return lowerName.includes('event') && lowerName.includes('date');
-  });
+const filteredTasks = allTasks.filter(task => {
+  const eventDateField = task.custom_fields.find(field => field.name === 'Event Date');
+  if (!eventDateField || !eventDateField.value) return false;
 
-const rawTimestamp = eventField?.value?.date;
-if (!rawTimestamp || isNaN(rawTimestamp)) {
-  return false;
-}
-let timestamp = parseInt(rawTimestamp);
-if (timestamp < 1000000000000) {
-  timestamp = timestamp * 1000;
-}
+  const eventDate = new Date(eventDateField.value);
+  const start = new Date('2025-04-01');
+  const end = new Date('2025-07-31');
 
+  const isInRange = eventDate >= start && eventDate <= end;
 
-  const isInRange = timestamp >= start && timestamp <= end;
-
-  const dateStr = isNaN(timestamp) ? 'Invalid' : new Date(timestamp).toDateString();
-  console.log(`   ${isInRange ? '✅' : '❌'} "${task.name}" - Date: ${dateStr}`);
-
+  console.log(`   ${isInRange ? '✅' : '❌'} "${task.name}" - Date: ${eventDate.toDateString()}`);
   return isInRange;
 });
 
+console.log(`✅ Tasks matching filter: ${filteredTasks.length}`);
 
-    console.log(`\n📎 Final filtered result: ${filteredTasks.length} tasks`);
 
     // If no tasks found, show some suggestions
     if (filteredTasks.length === 0 && allTasks.length > 0) {
