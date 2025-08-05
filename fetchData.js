@@ -145,68 +145,51 @@ async function fetchClickUpTasks(specificListId = null, specificFolderId = null)
     });
 
     // 🔍 Let's try different date ranges to see what we find
-    console.log("\n🔍 TESTING DIFFERENT DATE RANGES:");
-    
-    // Try a very wide range first (all of 2024 and 2025)
-    const veryStart = new Date('2024-01-01').getTime();
-    const veryEnd = new Date('2025-12-31').getTime();
-    
-    console.log(`Wide range: ${new Date(veryStart).toDateString()} to ${new Date(veryEnd).toDateString()}`);
+    // 🔍 TESTING DIFFERENT DATE RANGES:
+console.log("\n🔍 TESTING DIFFERENT DATE RANGES:");
 
-    const wideFilterTasks = allTasks.filter(task => {
-      const eventField = task.custom_fields?.find(field => {
-        const lowerName = field.name?.toLowerCase() || '';
-        return lowerName.includes('event') && lowerName.includes('date');
-      });
+const veryStart = Date.UTC(2024, 0, 1); // Jan 1, 2024 UTC
+const veryEnd = Date.UTC(2025, 11, 31, 23, 59, 59); // Dec 31, 2025 UTC
 
-      // 🔍 Ensure field and value exist
-      const rawTimestamp = eventField?.value?.date;
-      if (!rawTimestamp || isNaN(rawTimestamp)) {
-        return false;
-      }
-      let timestamp = parseInt(rawTimestamp);
-      if (timestamp < 1000000000000) {
-        timestamp = timestamp * 1000;
-      }
+console.log(`Wide range: ${new Date(veryStart).toUTCString()} to ${new Date(veryEnd).toUTCString()}`);
 
-      const isInWideRange = timestamp >= veryStart && timestamp <= veryEnd;
-
-      if (isInWideRange) {
-        console.log(`   ✅ Found: "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
-      }
-
-      return isInWideRange;
-    });
-
-    console.log(`📊 Wide range found: ${wideFilterTasks.length} tasks`);
-
-    // Now try your original range
-    console.log(`🎯 Your original range: 2025-04-01 to 2025-07-31`);
-    console.log(`🔍 Filtering by Event Date custom field...`);
-
-    const start = Date.UTC(2025, 3, 1); // April 1, 2025
-    const end = Date.UTC(2025, 6, 31, 23, 59, 59); // July 31, 2025 at end of day
-
-
-  const filteredTasks = allTasks.filter(task => {
-  const field = task.custom_fields?.find(f => {
-    const name = f.name?.toLowerCase() || '';
-    return name.includes('event') && name.includes('date');
-  });
-
+const wideFilterTasks = allTasks.filter(task => {
+  const field = task.custom_fields?.find(f => f.name === 'End of Game Time');
   if (!field || !field.value) return false;
 
   let raw = field.value?.date || field.value;
   let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
 
-  if (timestamp < 1000000000000) {
-    timestamp *= 1000; // Convert seconds to ms if needed
+  if (timestamp < 1000000000000) timestamp *= 1000;
+
+  const isInRange = timestamp >= veryStart && timestamp <= veryEnd;
+  if (isInRange) {
+    console.log(`   ✅ Found: "${task.name}" - UTC: ${new Date(timestamp).toUTCString()}`);
   }
 
+  return isInRange;
+});
+
+console.log(`📊 Wide range found: ${wideFilterTasks.length} tasks`);
+
+// 🎯 Filter to specific UTC range
+console.log(`🎯 Your original range: 2025-04-01 to 2025-07-31`);
+console.log(`🔍 Filtering by "End of Game Time"...`);
+
+const start = Date.UTC(2025, 3, 1); // April 1, 2025
+const end = Date.UTC(2025, 6, 31, 23, 59, 59); // July 31, 2025
+
+const filteredTasks = allTasks.filter(task => {
+  const field = task.custom_fields?.find(f => f.name === 'End of Game Time');
+  if (!field || !field.value) return false;
+
+  let raw = field.value?.date || field.value;
+  let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
+
+  if (timestamp < 1000000000000) timestamp *= 1000;
   if (isNaN(timestamp)) return false;
 
-  const isInRange = timestamp >= start && timestamp <= end;
-  return isInRange;
+  return timestamp >= start && timestamp <= end;
 });
 
   const missedTasks = allTasks.length - filteredTasks.length;
@@ -215,13 +198,13 @@ console.log(`⚠️ ${missedTasks} tasks were excluded by the filter`);
 if (missedTasks > 0) {
   console.log("🔍 Example of skipped tasks (up to 5):");
   allTasks.slice(0, 5).forEach(task => {
-    const field = task.custom_fields?.find(f => f.name?.toLowerCase().includes('event') && f.name?.toLowerCase().includes('date'));
+    const field = task.custom_fields?.find(f => f.name === 'End of Game Time');
     const raw = field?.value?.date || field?.value;
     let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
     if (timestamp < 1000000000000) timestamp *= 1000;
 
-    console.log(`   - "${task.name}" → ${new Date(timestamp).toDateString()}`);
-  });
+    console.log(`   - "${task.name}" → ${new Date(timestamp).toUTCString()}`);
+});
 }
 
 
