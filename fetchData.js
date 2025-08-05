@@ -45,21 +45,24 @@ async function fetchClickUpTasks(specificListId = null, specificFolderId = null)
       try {
         console.log(`📡 Fetching page ${page}... (${allTasks.length} tasks so far)`);
         
-        const response = await axios.get(url, {
-          headers,
-          params: {
-            // More comprehensive parameters to ensure we get ALL tasks
-            archived: true,           // Include archived tasks
-            include_closed: true,     // Include closed tasks
-            subtasks: true,          // Include subtasks
-            include_markdown_description: false,
-            page: page,
-            order_by: 'created',
-            reverse: false,          // Start with oldest first for more consistent pagination
-            statuses: ['to do', 'complete', 'in progress', 'review'], // Include common statuses
-            // Remove any date filters that might be excluding tasks
-          },
-          timeout: 30000
+        const teamSearchUrl = `https://api.clickup.com/api/v2/team/${teamId}/task`;
+
+        const params = {
+          archived: true,
+          include_closed: true,
+          subtasks: true,
+          include_markdown_description: false,
+          page: page,
+          order_by: 'created',
+          reverse: false,
+          list_ids: [listId], // ← ensures you still filter to the correct list
+          statuses: ['to do', 'complete', 'in progress', 'review'],
+        };
+        
+        const response = await axios.get(teamSearchUrl, {
+            headers,
+            params,
+            timeout: 30000,
         });
 
         const data = response.data;
