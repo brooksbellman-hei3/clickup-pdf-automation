@@ -120,4 +120,5 @@ async function testClickUpConnection() {
   }
 }
 
-module.exports = { fetchClickUpTasks, testClickUpConnection };
+const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
+
