@@ -38,7 +38,7 @@ while (hasMore) {
 
     const data = await response.json();
     console.log(`📄 Page ${page}: Retrieved ${data.tasks.length} tasks`);
-    alltasks = alltasks.concat(data.tasks);
+    allTasks = allTasks.concat(data.tasks);
     hasMore = data.tasks.length === 100;
     page++;
 
