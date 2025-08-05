@@ -135,27 +135,40 @@ if (timestamp < 1000000000000) {
     console.log(`📊 Wide range found: ${wideFilterTasks.length} tasks`);
 
     // Now try your original range
-    const start = new Date('2025-04-01').getTime();
-    const end = new Date('2025-07-31').getTime();
+console.log(`🎯 Your original range: 2025-04-01 to 2025-07-31`);
+console.log(`🔍 Filtering by Event Date custom field...`);
 
-    console.log(`🎯 Your original range: 2025-04-01 to 2025-07-31`);
-    console.log(`🔍 Filtering by Event Date custom field...`);
+const start = new Date('2025-04-01').getTime();
+const end = new Date('2025-07-31').getTime();
 
-const filteredTasks = allTasks.filter(task => {
-  const eventDateField = task.custom_fields.find(field => field.name === 'Event Date');
-  if (!eventDateField || !eventDateField.value) return false;
+const filtered = allTasks.filter(task => {
+  const field = task.custom_fields.find(f => f.name?.toLowerCase() === 'event date');
+  if (!field || !field.value) return false;
 
-  const eventDate = new Date(eventDateField.value);
-  const start = new Date('2025-04-01');
-  const end = new Date('2025-07-31');
+  // Handle ClickUp date format: { value: { date: "1713052800000" } }
+  let raw = field.value?.date || field.value;
 
-  const isInRange = eventDate >= start && eventDate <= end;
+  // Convert to number
+  let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
 
-  console.log(`   ${isInRange ? '✅' : '❌'} "${task.name}" - Date: ${eventDate.toDateString()}`);
+  // Convert seconds to ms if needed
+  if (timestamp < 1000000000000) {
+    timestamp *= 1000;
+  }
+
+  if (isNaN(timestamp)) return false;
+
+  const isInRange = timestamp >= start && timestamp <= end;
+  if (isInRange) {
+    console.log(`✅ "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
+  } else {
+    console.log(`❌ "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
+  }
+
   return isInRange;
 });
 
-console.log(`✅ Tasks matching filter: ${filteredTasks.length}`);
+console.log(`✅ Tasks matching filter: ${filtered.length}`);
 
 
     // If no tasks found, show some suggestions
