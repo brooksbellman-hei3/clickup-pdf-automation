@@ -141,7 +141,7 @@ console.log(`🔍 Filtering by Event Date custom field...`);
 const start = new Date('2025-04-01').getTime();
 const end = new Date('2025-07-31').getTime();
 
-const filtered = allTasks.filter(task => {
+const filteredTasks = allTasks.filter(task => {
   const field = task.custom_fields.find(f => f.name?.toLowerCase() === 'event date');
   if (!field || !field.value) return false;
 
