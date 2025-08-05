@@ -1,15 +1,16 @@
 const axios = require("axios");
 
 async function fetchClickUpTasks() {
-  const listId = process.env.CLICKUP_LIST_ID;
-  const token = process.env.CLICKUP_API_TOKEN;
+ const token = process.env.CLICKUP_API_TOKEN;
+const teamId = process.env.CLICKUP_TEAM_ID;
+const listId = process.env.CLICKUP_LIST_ID;
 
-  if (!listId || !token) {
-    console.error("❌ Missing ClickUp configuration: LIST_ID or API_TOKEN");
-    return [];
-  }
+if (!teamId || !token || !listId) {
+  console.error("❌ Missing ClickUp configuration: TEAM_ID, LIST_ID or API_TOKEN");
+  return [];
+}
 
-  const url = `https://api.clickup.com/api/v2/list/${listId}/task?archived=false&include_closed=true&subtasks=true`;
+const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true`;
   const headers = { 
     'Authorization': token,
     'Content-Type': 'application/json'
