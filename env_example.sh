@@ -2,6 +2,8 @@
 # Get your API token from: https://app.clickup.com/settings/apps
 CLICKUP_API_TOKEN=pk_your_token_here
 CLICKUP_LIST_ID=your_list_id_here
+CLICKUP_TEAM_ID=your_team_id_here;
+
 
 # Email Configuration (Gmail SMTP)
 # For Gmail, you'll need an "App Password" instead of your regular password
