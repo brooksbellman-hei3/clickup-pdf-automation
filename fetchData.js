@@ -43,6 +43,14 @@ while (hasMore) {
     const data = await response.json();
     const batch = data.tasks || [];
 
+console.log(`📄 Retrieved ${batch.length} tasks before ${new Date(latestTimestamp).toISOString()}`);
+
+// 🕒 DEBUG each task's date_created
+batch.forEach(task => {
+  console.log(`   🕒 "${task.name}" - Created: ${new Date(Number(task.date_created)).toISOString()}`);
+});
+
+
     console.log(`📄 Retrieved ${batch.length} tasks before ${new Date(latestTimestamp).toISOString()}`);
     allTasks.push(...batch);
 
@@ -53,7 +61,11 @@ while (hasMore) {
       const oldest = batch.reduce((prev, curr) => {
         return (curr.date_updated < prev.date_updated) ? curr : prev;
       });
+    if (oldesr?.date_created) {
       latestTimestamp = parseInt(oldest.date_created);
+    } else {
+      console.warn(" No valid date_created found in batch, stopping pagination.");
+      hasMore = false;
     }
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:", error.message);
