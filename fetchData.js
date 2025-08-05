@@ -168,7 +168,7 @@ const filteredTasks = allTasks.filter(task => {
   return isInRange;
 });
 
-console.log(`✅ Tasks matching filter: ${filtered.length}`);
+console.log(`✅ Tasks matching filter: ${filteredTasks.length}`);
 
 
     // If no tasks found, show some suggestions
