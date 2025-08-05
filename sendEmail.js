@@ -6,10 +6,10 @@ let generatePieChart, generateLineChart;
 
 try {
   // Try lowercase first (based on your original files)
-  const fetchModule = require('./fetchdata');
+  const fetchModule = require('./fetchData');
   fetchClickUpTasks = fetchModule.fetchClickUpTasks;
   testClickUpConnection = fetchModule.testClickUpConnection;
-  console.log('✅ Successfully imported fetchdata.js');
+  console.log('✅ Successfully imported fetchData.js');
 } catch (error) {
   try {
     // Try with capital D
@@ -26,10 +26,10 @@ try {
 
 try {
   // Try lowercase first
-  const chartModule = require('./generatecharts');
+  const chartModule = require('./generateCharts');
   generatePieChart = chartModule.generatePieChart;
   generateLineChart = chartModule.generateLineChart;
-  console.log('✅ Successfully imported generatecharts.js');
+  console.log('✅ Successfully imported generateCharts.js');
 } catch (error) {
   try {
     // Try with capital C
