@@ -22,20 +22,32 @@ const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=t
     let allTasks = [];
 let page = 0;
 let hasMore = true;
+let tasks = [];
 
 while (hasMore) {
-  const pagedUrl = `${url}&page=${page}&limit=100`;
-  const response = await axios.get(pagedUrl, {
-    headers,
-    timeout: 15000
-  });
+  const pagedUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=100&page=${page}`;
 
-  const tasks = response.data.tasks || [];
-  allTasks = allTasks.concat(tasks);
-  console.log(`📄 Page ${page}: Retrieved ${tasks.length} tasks`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30 sec timeout
 
-  hasMore = tasks.length === 100; // if fewer than 100 tasks returned, assume it's the last page
-  page++;
+  try {
+    const response = await fetch(pagedUrl, {
+      headers,
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    const data = await response.json();
+    console.log(`📄 Page ${page}: Retrieved ${data.tasks.length} tasks`);
+    tasks = tasks.concat(data.tasks);
+    hasMore = data.tasks.length === 100;
+    page++;
+
+  } catch (error) {
+    clearTimeout(timeout);
+    console.error("❌ Error fetching ClickUp tasks:", error.message);
+    break;
+  }
 }
 
 console.log(`✅ Total fetched: ${allTasks.length} tasks`);
