@@ -36,9 +36,13 @@ async function fetchClickUpTasks() {
 
     const filtered = tasks.filter(task => {
       const eventField = task.custom_fields?.find(f => f.name === "Event Date");
-      const timestamp = eventField?.value;
-      return timestamp && timestamp >= start && timestamp <= end;
-    });
+
+      if (!eventField || !eventField.value) return false;
+
+      const timestamp = Number(eventField.value);
+      return timestamp >= start && timestamp <= end;
+});
+
 
     console.log(`✅ Fetched ${tasks.length} tasks`);
     console.log(`📎 Filtered down to ${filtered.length} tasks based on Event Date`);
