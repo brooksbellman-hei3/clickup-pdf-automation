@@ -28,7 +28,7 @@ async function fetchClickUpTasks() {
     console.log(`✅ Fetched ${allTasks.length} tasks`);
 
     // ✅ Filter tasks by Event Date custom field
-    const start = new Date('2025-04-01').getTime();
+    const start = new Date('2025-07-10').getTime();
     const end = new Date('2025-07-31').getTime();
 
     console.log(`🔍 Filtering tasks between ${new Date(start).toDateString()} and ${new Date(end).toDateString()}`);
