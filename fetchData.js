@@ -23,7 +23,7 @@ let page = 0;
 let hasMore = true;
 
 while (hasMore) {
-  const pagedUrl = `${url}&page=${page}`;
+  const pagedUrl = `${url}&page=${page}&limit=100`;
   const response = await axios.get(pagedUrl, {
     headers,
     timeout: 15000
