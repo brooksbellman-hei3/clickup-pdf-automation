@@ -81,7 +81,7 @@ async function testClickUpConnection() {
 }
 
 module.exports = {
-  fetchAllTasks,
+  fetchClickUpTasks,
   testClickUpConnection
 };
 
