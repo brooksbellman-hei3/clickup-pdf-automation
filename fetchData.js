@@ -124,29 +124,31 @@ console.log(`✅ Total fetched: ${allTasks.length} tasks`);
       const eventField = task.custom_fields?.find(field => {
         const lowerName = field.name?.toLowerCase() || '';
         return lowerName.includes('event') && lowerName.includes('date');
-      });
+  });
 
-      if (!eventField || !eventField.value) {
-        return false;
-      }
+  // 🔍 Ensure field and value exist
+  const rawTimestamp = eventField?.value?.date;
 
-      let timestamp = parseInt(eventField.value);
-      if (timestamp < 1000000000000) {
-        timestamp = timestamp * 1000;
-      }
+  if (!rawTimestamp || isNaN(rawTimestamp)) {
+    return false;
+  }
 
-      if (isNaN(timestamp)) {
-        timestamp = new Date(eventField.value).getTime();
-      }
+  let timestamp = parseInt(rawTimestamp);
 
-      const isInWideRange = timestamp >= veryStart && timestamp <= veryEnd;
-      
-      if (isInWideRange) {
-        console.log(`   ✅ Found: "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
-      }
+  // ⏱ ClickUp sometimes stores timestamps in seconds — adjust if necessary
+  if (timestamp < 1000000000000) {
+    timestamp = timestamp * 1000;
+  }
 
-      return isInWideRange;
-    });
+  const isInWideRange = timestamp >= veryStart && timestamp <= veryEnd;
+
+  if (isInWideRange) {
+    console.log(`   ✅ Found: "${task.name}" - Date: ${new Date(timestamp).toDateString()}`);
+  }
+
+  return isInWideRange;
+});
+
 
     console.log(`📊 Wide range found: ${wideFilterTasks.length} tasks`);
 
@@ -160,30 +162,29 @@ console.log(`✅ Total fetched: ${allTasks.length} tasks`);
       const eventField = task.custom_fields?.find(field => {
         const lowerName = field.name?.toLowerCase() || '';
         return lowerName.includes('event') && lowerName.includes('date');
-      });
+  });
 
-      if (!eventField || !eventField.value) {
-        return false;
-      }
+  const rawTimestamp = eventField?.value?.date;
 
-      let timestamp = parseInt(eventField.value);
-      if (timestamp < 1000000000000) {
-        timestamp = timestamp * 1000;
-      }
+  if (!rawTimestamp || isNaN(rawTimestamp)) {
+    return false;
+  }
 
-      if (isNaN(timestamp)) {
-        timestamp = new Date(eventField.value).getTime();
-      }
+  let timestamp = parseInt(rawTimestamp);
 
-      const isInRange = timestamp >= start && timestamp <= end;
-      
-      if (eventField) {
-        const dateStr = isNaN(timestamp) ? 'Invalid' : new Date(timestamp).toDateString();
-        console.log(`   ${isInRange ? '✅' : '❌'} "${task.name}" - Date: ${dateStr}`);
-      }
+  // 🕒 Normalize seconds if needed
+  if (timestamp < 1000000000000) {
+    timestamp = timestamp * 1000;
+  }
 
-      return isInRange;
-    });
+  const isInRange = timestamp >= start && timestamp <= end;
+
+  const dateStr = isNaN(timestamp) ? 'Invalid' : new Date(timestamp).toDateString();
+  console.log(`   ${isInRange ? '✅' : '❌'} "${task.name}" - Date: ${dateStr}`);
+
+  return isInRange;
+});
+
 
     console.log(`\n📎 Final filtered result: ${filteredTasks.length} tasks`);
 
