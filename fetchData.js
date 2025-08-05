@@ -10,7 +10,7 @@ if (!teamId || !token || !listId) {
   return [];
 }
 
-const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&list_ids[]=${listId}`;
+const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=true&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
   const headers = { 
     'Authorization': token,
     'Content-Type': 'application/json'
@@ -28,7 +28,7 @@ const allTasks = [];
 const baseUrl = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
     
 while (hasMore) {
-  const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=false&order_by=updated&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_updated_lt=${latestTimestamp}`;
+  const url = `https://api.clickup.com/api/v2/team/${teamId}/task?include_closed=true&subtasks=true&archived=true&order_by=created&reverse=true&list_ids[]=${listId}&limit=${perPage}&date_created_lt=${latestTimestamp}`;
 
   try {
     const controller = new AbortController();
@@ -58,15 +58,16 @@ batch.forEach(task => {
       hasMore = false;
     } else {
       // Find the oldest updated task to paginate next
-      const oldest = batch.reduce((prev, curr) => {
-        return (curr.date_updated < prev.date_updated) ? curr : prev;
-      });
-    if (oldesr?.date_created) {
-      latestTimestamp = parseInt(oldest.date_created);
-    } else {
-      console.warn(" No valid date_created found in batch, stopping pagination.");
-      hasMore = false;
-    }
+      const oldest = batch.reduce((prev, curr) =>
+  (curr.date_created < prev.date_created) ? curr : prev
+);
+
+if (oldest?.date_created) {
+  latestTimestamp = parseInt(oldest.date_created) - 1; // ✅ subtract 1ms
+} else {
+  console.warn("⚠️ No valid date_created found in batch, stopping pagination.");
+  hasMore = false;
+}
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:", error.message);
     break;
