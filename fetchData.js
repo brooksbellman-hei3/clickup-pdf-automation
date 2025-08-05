@@ -29,7 +29,7 @@ async function fetchClickUpTasks() {
       const timestamp = Number(eventDateField.value);
       const eventDate = new Date(timestamp);
 
-      const start = new Date("2025-04-01");
+      const start = new Date("2025-07-01");
       const end = new Date("2025-07-31");
 
       return eventDate >= start && eventDate <= end;
