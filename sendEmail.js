@@ -42,6 +42,23 @@ async function sendReport() {
 
 async function generateAllCharts(tasks) {
   const charts = [];
+ 
+  // 🔍 DEBUG: Show custom fields from a few tasks
+  tasks.slice(0, 5).forEach((task, i) => {
+    console.log(`\n🔎 Task ${i + 1}: "${task.name}"`);
+    task.custom_fields?.forEach(f => {
+      console.log(`   - Field: "${f.name}", Value:`, f.value);
+    });
+  });
+
+  const viewerChart = await generateFixedColorCustomFieldChart(
+    tasks,
+    'Viewer Status at Tip-Off - WNBA',
+    'Viewer Status at Tip-Off (WNBA)',
+    0
+  );
+  ...
+
 
   const viewerChart = await generateFixedColorCustomFieldChart(
     tasks,
