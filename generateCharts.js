@@ -115,8 +115,15 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     const outputPath = path.join(__dirname, filename);
 
     // Write the buffer to file
-    const jpegBuffer = await sharp(buffer).jpeg().toBuffer();
+    const jpegBuffer = await sharp(buffer)
+      .jpeg({ quality: 90 })
+      .toBuffer();
+
+    const filename = `chart_${index}_${Date.now()}.jpg`; // note: .jpg extension
+    const outputPath = path.join(__dirname, filename);
+
     fs.writeFileSync(outputPath, jpegBuffer);
+
 
     
     // Verify the file was written correctly
