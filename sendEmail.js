@@ -99,24 +99,6 @@ async function generateAllCharts(tasks) {
   return charts;
 }
 
-  const labels = Object.keys(counts);
-  const data = labels.map(label => counts[label]);
-  const colors = labels.map(label => labelColorMap[label]);
-
-  console.log(`📊 Chart: ${chartTitle}`);
-  console.log(`Included ${totalIncluded} tasks`);
-  console.log('Labels:', labels);
-  console.log('Data:', data);
-  console.log('Colors:', colors);
-
-  if (labels.length === 0) {
-    console.warn(`⚠️ No valid data found for "${fieldName}"`);
-    return null;
-  }
-
-  return await generatePieChart(chartTitle, labels, data, colors, index);
-}
-
 function parseClickUpColor(colorName) {
   const map = {
     'green': '#00FF00',
