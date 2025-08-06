@@ -52,16 +52,35 @@ async function createPDF(chartPaths) {
       console.log(`📊 Adding chart to PDF: ${chartPath}`);
       console.log(`📊 Position: x=${x}, y=${y}, width=${chartWidth}, height=${chartHeight}`);
       
-      doc.image(chartPath, x, y, {
+      // Try reading the image first to ensure it's valid
+      const imageBuffer = fs.readFileSync(chartPath);
+      console.log(`📊 Image buffer size: ${imageBuffer.length} bytes`);
+      
+      // Add the image using the buffer instead of file path (sometimes more reliable)
+      doc.image(imageBuffer, x, y, {
         width: chartWidth,
-        height: chartHeight
+        height: chartHeight,
+        fit: [chartWidth, chartHeight], // Ensure it fits properly
+        align: 'center',
+        valign: 'center'
       });
       
       console.log(`✅ Chart ${i + 1} added successfully`);
     } catch (error) {
       console.error(`❌ Error adding chart ${i + 1} to PDF:`, error.message);
+      console.error(`❌ Error stack:`, error.stack);
+      
       // Add error text to PDF instead
       doc.fontSize(16).text(`Error loading chart: ${error.message}`, x, y);
+      doc.fontSize(12).text(`Chart path: ${chartPath}`, x, y + 30);
+      
+      // Also try to add some debug info
+      try {
+        const stats = fs.statSync(chartPath);
+        doc.text(`File exists: yes, Size: ${stats.size} bytes`, x, y + 50);
+      } catch (statError) {
+        doc.text(`File exists: no - ${statError.message}`, x, y + 50);
+      }
     }
   }
 
