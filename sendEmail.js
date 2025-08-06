@@ -2,8 +2,9 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 
 const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
-const { generatePieChart, generateFixedColorCustomFieldChart } = require('./generateCharts');
+const { generatePieChart, generateFixedColorCustomFieldChart, analyzeFieldStructure } = require('./generateCharts');
 const createPDF = require('./createPDF');
+
 function findFieldNameByKeyword(fieldNames, keyword) {
   const normalize = str =>
     str.toLowerCase().replace(/[\s\-–—]+/g, ' ').trim(); // normalize spaces & dashes
@@ -75,27 +76,44 @@ async function generateAllCharts(tasks) {
   console.log("🔍 Matched field name for viewer status:", viewerFieldName);
   console.log("🔍 Matched field name for tablet status:", tabletFieldName);
 
+  // 🔍 Add debugging analysis for the fields we're going to chart
+  if (viewerFieldName) {
+    analyzeFieldStructure(tasks, viewerFieldName);
+  }
+  if (tabletFieldName) {
+    analyzeFieldStructure(tasks, tabletFieldName);
+  }
+
   // 📊 Generate charts with resolved names (if found)
   if (viewerFieldName) {
+    console.log(`\n🎨 Generating viewer status chart...`);
     const viewerChart = await generateFixedColorCustomFieldChart(
       tasks,
       viewerFieldName,
       'Viewer Status at Tip-Off (WNBA)',
       0
     );
-    if (viewerChart) charts.push(viewerChart);
+    if (viewerChart) {
+      console.log(`✅ Viewer chart generated: ${viewerChart}`);
+      charts.push(viewerChart);
+    }
   }
 
   if (tabletFieldName) {
+    console.log(`\n🎨 Generating tablet status chart...`);
     const tabletChart = await generateFixedColorCustomFieldChart(
       tasks,
       tabletFieldName,
       'Overall Tablet Status',
       1
     );
-    if (tabletChart) charts.push(tabletChart);
+    if (tabletChart) {
+      console.log(`✅ Tablet chart generated: ${tabletChart}`);
+      charts.push(tabletChart);
+    }
   }
 
+  console.log(`\n📈 Total charts generated: ${charts.length}`);
   return charts;
 }
 
@@ -114,7 +132,7 @@ function parseClickUpColor(colorName) {
 async function emailReport(pdfPath, taskCount) {
   console.log("📧 Sending email...");
 
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT, 10),
     secure: process.env.SMTP_PORT === "465",
