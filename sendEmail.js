@@ -5,9 +5,12 @@ const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
 const { generatePieChart } = require('./generateCharts');
 const createPDF = require('./createPDF');
 function findFieldNameByKeyword(fieldNames, keyword) {
-  return fieldNames.find(name =>
-    name.toLowerCase().includes(keyword.toLowerCase())
-  );
+  const normalizedKeyword = keyword.toLowerCase().replace(/\s+/g, ' ').trim();
+
+  return fieldNames.find(name => {
+    const normalizedName = name.toLowerCase().replace(/\s+/g, ' ').trim();
+    return normalizedName.includes(normalizedKeyword);
+  });
 }
 
 async function sendReport() {
