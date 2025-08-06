@@ -5,7 +5,10 @@ async function createPDF(chartPaths) {
   console.log(`📄 Creating PDF with ${chartPaths.length} charts...`);
   console.log(`📄 Chart paths:`, chartPaths);
 
-  const doc = new PDFDocument({ margin: 50 });
+  const doc = new PDFDocument({ 
+    margin: 50,
+    bufferPages: true // Important: enables proper image handling
+  });
   const outputPath = '/tmp/clickup_report.pdf';
   doc.pipe(fs.createWriteStream(outputPath));
 
@@ -40,27 +43,30 @@ async function createPDF(chartPaths) {
 
     doc.addPage();
 
-    const pageWidth = doc.page.width;
-    const pageHeight = doc.page.height;
-    const chartWidth = 500;
-    const chartHeight = 400;
-
-    const x = (pageWidth - chartWidth) / 2;
-    const y = (pageHeight - chartHeight) / 2;
-
     try {
       console.log(`📊 Adding chart to PDF: ${chartPath}`);
-      console.log(`📊 Position: x=${x}, y=${y}, width=${chartWidth}, height=${chartHeight}`);
       
-      // Try reading the image first to ensure it's valid
+      // Read the image buffer first
       const imageBuffer = fs.readFileSync(chartPath);
       console.log(`📊 Image buffer size: ${imageBuffer.length} bytes`);
       
-      // Add the image using the buffer instead of file path (sometimes more reliable)
+      // Get page dimensions
+      const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const pageHeight = doc.page.height - doc.page.margins.top - doc.page.margins.bottom;
+      
+      // Calculate chart dimensions (maintain aspect ratio)
+      const maxWidth = pageWidth * 0.8; // 80% of available width
+      const maxHeight = pageHeight * 0.7; // 70% of available height
+      
+      // Center the image on the page
+      const x = doc.page.margins.left + (pageWidth - maxWidth) / 2;
+      const y = doc.page.margins.top + 50; // Leave some space at top
+      
+      console.log(`📊 Position: x=${x}, y=${y}, maxWidth=${maxWidth}, maxHeight=${maxHeight}`);
+      
+      // Add the image with proper options
       doc.image(imageBuffer, x, y, {
-        width: chartWidth,
-        height: chartHeight,
-        fit: [chartWidth, chartHeight], // Ensure it fits properly
+        fit: [maxWidth, maxHeight], // Fit within these dimensions
         align: 'center',
         valign: 'center'
       });
@@ -71,15 +77,15 @@ async function createPDF(chartPaths) {
       console.error(`❌ Error stack:`, error.stack);
       
       // Add error text to PDF instead
-      doc.fontSize(16).text(`Error loading chart: ${error.message}`, x, y);
-      doc.fontSize(12).text(`Chart path: ${chartPath}`, x, y + 30);
+      doc.fontSize(16).text(`Error loading chart: ${error.message}`, 50, 100);
+      doc.fontSize(12).text(`Chart path: ${chartPath}`, 50, 130);
       
       // Also try to add some debug info
       try {
         const stats = fs.statSync(chartPath);
-        doc.text(`File exists: yes, Size: ${stats.size} bytes`, x, y + 50);
+        doc.text(`File exists: yes, Size: ${stats.size} bytes`, 50, 150);
       } catch (statError) {
-        doc.text(`File exists: no - ${statError.message}`, x, y + 50);
+        doc.text(`File exists: no - ${statError.message}`, 50, 150);
       }
     }
   }
