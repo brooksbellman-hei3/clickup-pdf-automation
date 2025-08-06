@@ -168,10 +168,12 @@ async function emailReport(attachments, taskCount) {
       <br>
       <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
     `,
-    attachments: attachments.map((path,index) => ({
+    attachments: attachments.map((path, index) => ({
       filename: `chart_${index + 1}.jpg`,
-      path: Path
-    }))
+      path: path,
+      contentType: 'image/jpeg'
+}))
+
   });
 
   console.log("✅ Email sent successfully");
