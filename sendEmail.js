@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 
 const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
-const { generatePieChart } = require('./generateCharts');
+const { generatePieChart, generateFixedColorCustomFieldChart } = require('./generateCharts');
 const createPDF = require('./createPDF');
 function findFieldNameByKeyword(fieldNames, keyword) {
   const normalize = str =>
@@ -98,45 +98,6 @@ async function generateAllCharts(tasks) {
 
   return charts;
 }
-
-async function generateFixedColorCustomFieldChart(tasks, fieldName, chartTitle, index) {
-  const counts = {};
-  const labelColorMap = {
-    'Green': '#28a745',
-    'Orange': '#fd7e14',
-    'Red': '#dc3545',
-    'Black': '#000000'
-  };
-
-  let totalIncluded = 0;
-
-  tasks.forEach((task, i) => {
-    const field = task.custom_fields?.find(f => f.name === fieldName);
-    if (!field || field.value == null) return; // ✅ use return inside forEach
-
-    let value;
-
-    // 🧠 Resolve label from dropdown field
-    if (field.type === 'drop_down' && Array.isArray(field.type_config?.options)) {
-      const option = field.type_config.options[field.value];
-      value = option?.name?.trim();
-    } else if (typeof field.value === 'string') {
-      value = field.value.trim();
-    }
-
-    if (!value) return; // skip if still invalid
-
-    // ✅ Debug logs
-    if (i < 5) {
-      console.log(`[DEBUG] Task ${i + 1} - ${fieldName}:`, value);
-      console.log(`[DEBUG:RAW] Field object for "${fieldName}":`, field);
-    }
-
-    if (!labelColorMap[value]) return; // skip unsupported values
-
-    counts[value] = (counts[value] || 0) + 1;
-    totalIncluded++;
-  });
 
   const labels = Object.keys(counts);
   const data = labels.map(label => counts[label]);
