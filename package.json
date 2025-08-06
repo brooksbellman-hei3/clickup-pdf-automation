@@ -23,7 +23,8 @@
     "nodemailer": "^6.9.8",
     "node-cron": "^3.0.3",
     "pdfkit": "^0.14.0",
-    "chartjs-plugin-datalabels": "^2.2.0"
+    "chartjs-plugin-datalabels": "^2.2.0",
+    "sharp": "^0.33.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
