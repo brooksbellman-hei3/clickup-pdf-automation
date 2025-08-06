@@ -7,17 +7,14 @@ async function createPDF(chartPaths) {
   doc.pipe(fs.createWriteStream(outputPath));
 
   // Title page
-  doc.fontSize(24)
-     .text('ClickUp Daily Report', { align: 'center' });
-  
-  doc.fontSize(12)
-     .text(`Generated on: ${new Date().toLocaleString('en-US', {
-       year: 'numeric',
-       month: 'long', 
-       day: 'numeric',
-       hour: '2-digit',
-       minute: '2-digit'
-     })}`, { align: 'center' });
+  doc.fontSize(24).text('ClickUp Daily Report', { align: 'center' });
+  doc.fontSize(12).text(`Generated on: ${new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}`, { align: 'center' });
 
   // Insert charts
   for (let i = 0; i < chartPaths.length; i++) {
