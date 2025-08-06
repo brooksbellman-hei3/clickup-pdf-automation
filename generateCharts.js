@@ -22,11 +22,7 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
     width, 
     height,
-    backgroundColour: 'white', // Ensure white background
-    plugins: {
-      modern: ['chartjs-adapter-date-fns'], // Sometimes needed for compatibility
-      requireLegacy: ['chartjs-plugin-datalabels'] // Fallback plugins
-    }
+    backgroundColour: 'white' // Ensure white background
   });
 
   // Use hex colors directly instead of RGBA - sometimes PDFKit has issues with RGBA
