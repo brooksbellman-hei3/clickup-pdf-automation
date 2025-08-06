@@ -102,5 +102,6 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
 }
 
 module.exports = {
+  generatePieChart,
   generateFixedColorCustomFieldChart
 };
