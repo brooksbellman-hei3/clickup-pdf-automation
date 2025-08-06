@@ -44,7 +44,7 @@ async function sendReport() {
     return;
   }
 
-  await emailReport(pdfPath, tasks.length);
+  await emailReport(chartPaths, tasks.length);
 
   if (fs.existsSync(pdfPath)) {
     fs.unlinkSync(pdfPath);
