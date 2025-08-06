@@ -44,7 +44,6 @@ async function sendReport() {
     return;
   }
 
-  const pdfPath = await createPDF(chartPaths);
   await emailReport(pdfPath, tasks.length);
 
   if (fs.existsSync(pdfPath)) {
