@@ -3,7 +3,7 @@ const fs = require('fs');
 
 const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
 const { generatePieChart, generateFixedColorCustomFieldChart, analyzeFieldStructure } = require('./generateCharts');
-const createPDF = require('./createPDF');
+// const createPDF = require('./createPDF');
 
 function findFieldNameByKeyword(fieldNames, keyword) {
   const normalize = str =>
@@ -161,13 +161,13 @@ async function emailReport(attachments, taskCount) {
     to: process.env.EMAIL_TO,
     subject: `📊 Daily ClickUp Report - ${currentDate}`,
     html: `
-      <h2>📊 Daily ClickUp Report</h2>
-      <p><strong>Date:</strong> ${currentDate}</p>
-      <p><strong>Total Tasks Processed:</strong> ${taskCount}</p>
-      <p>Please find your detailed task analysis report attached.</p>
-      <br>
-      <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
-    `,
+  <h2>📊 Daily ClickUp Report</h2>
+  <p><strong>Date:</strong> ${currentDate}</p>
+  <p><strong>Total Tasks Processed:</strong> ${taskCount}</p>
+  <p>Your charts are attached as image files (.jpg).</p>
+  <br>
+  <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
+`,
     attachments: attachments.map((path, index) => ({
       filename: `chart_${index + 1}.jpg`,
       path: path,
