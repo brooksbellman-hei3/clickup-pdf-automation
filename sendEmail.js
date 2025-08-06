@@ -128,7 +128,7 @@ function parseClickUpColor(colorName) {
   return map[colorName?.toLowerCase()] || '#999999';
 }
 
-async function emailReport(pdfPath, taskCount) {
+async function emailReport(attachments, taskCount) {
   console.log("📧 Sending email...");
 
   const transporter = nodemailer.createTransport({
@@ -168,10 +168,10 @@ async function emailReport(pdfPath, taskCount) {
       <br>
       <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
     `,
-    attachments: [{
-      filename: `clickup_report_${new Date().toISOString().split('T')[0]}.pdf`,
-      path: pdfPath
-    }],
+    attachments: attachments.map((path,index) => ({
+      filename: `chart_${index + 1}.jpg`,
+      path: Path
+    }))
   });
 
   console.log("✅ Email sent successfully");
