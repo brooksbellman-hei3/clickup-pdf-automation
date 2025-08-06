@@ -64,29 +64,62 @@ async function generateAllCharts(tasks) {
 
 async function generateFixedColorCustomFieldChart(tasks, fieldName, chartTitle, index) {
   const counts = {};
+  const labelColorMap = {};
+  let totalIncluded = 0;
+
+  const refTask = tasks.find(t => t.custom_fields?.some(f => f.name === fieldName && f.type_config?.options));
+  const fieldOptions = refTask?.custom_fields?.find(f => f.name === fieldName)?.type_config?.options || [];
+
+  // Build label → color map from dropdown config
+  fieldOptions.forEach(opt => {
+    const label = opt.label;
+    const color = parseClickUpColor(opt.color);
+    if (label) labelColorMap[label] = color;
+  });
 
   tasks.forEach(task => {
     const field = task.custom_fields?.find(f => f.name === fieldName);
-    const value = field?.value?.label || field?.value;
-    if (!value || value === 'null') return; // skip null/empty
+    if (!field || !field.value) return;
 
-    counts[value] = (counts[value] || 0) + 1;
+    const selectedOption = fieldOptions.find(opt => opt.id === field.value);
+    if (!selectedOption) return;
+
+    const label = selectedOption.label;
+    const color = parseClickUpColor(selectedOption.color);
+
+    counts[label] = (counts[label] || 0) + 1;
+    labelColorMap[label] = color;
+    totalIncluded++;
   });
-
-  const labelColorMap = {
-    'Green': '#00FF00',
-    'Orange': '#FFA500',
-    'Red': '#FF0000',
-    'Black': '#000000'
-  };
 
   const labels = Object.keys(counts);
   const data = labels.map(label => counts[label]);
   const colors = labels.map(label => labelColorMap[label] || '#999999');
 
-  if (labels.length === 0) return null;
+  console.log(`📊 Chart: ${chartTitle}`);
+  console.log(`Included ${totalIncluded} tasks`);
+  console.log('Labels:', labels);
+  console.log('Data:', data);
+  console.log('Colors:', colors);
+
+  if (labels.length === 0) {
+    console.warn(`⚠️ No valid data found for "${fieldName}"`);
+    return null;
+  }
 
   return await generatePieChart(chartTitle, labels, data, colors, index);
+}
+
+function parseClickUpColor(colorName) {
+  const map = {
+    'green': '#00FF00',
+    'orange': '#FFA500',
+    'red': '#FF0000',
+    'black': '#000000',
+    'gray': '#808080',
+    'blue': '#0000FF'
+  };
+  return map[colorName?.toLowerCase()] || '#999999';
 }
 
 async function emailReport(pdfPath, taskCount) {
