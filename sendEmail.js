@@ -72,37 +72,33 @@ async function generateAllCharts(tasks) {
 
 async function generateFixedColorCustomFieldChart(tasks, fieldName, chartTitle, index) {
   const counts = {};
-  const labelColorMap = {};
+  const labelColorMap = {
+    'green': '#00FF00',
+    'orange': '#FFA500',
+    'red': '#FF0000',
+    'black': '#000000'
+  };
+
   let totalIncluded = 0;
-
-  const refTask = tasks.find(t => t.custom_fields?.some(f => f.name === fieldName && f.type_config?.options));
-  const fieldOptions = refTask?.custom_fields?.find(f => f.name === fieldName)?.type_config?.options || [];
-
-  // Build label → color map from dropdown config
-  fieldOptions.forEach(opt => {
-    const label = opt.label;
-    const color = parseClickUpColor(opt.color);
-    if (label) labelColorMap[label] = color;
-  });
 
   tasks.forEach(task => {
     const field = task.custom_fields?.find(f => f.name === fieldName);
-    if (!field || !field.value) return;
+    const rawValue = field?.value;
 
-    const selectedOption = fieldOptions.find(opt => opt.id === field.value);
-    if (!selectedOption) return;
+    if (!rawValue || typeof rawValue !== 'string') return; // skip nulls or invalids
 
-    const label = selectedOption.label;
-    const color = parseClickUpColor(selectedOption.color);
+    const value = rawValue.toLowerCase(); // normalize
+    const color = labelColorMap[value];
 
-    counts[label] = (counts[label] || 0) + 1;
-    labelColorMap[label] = color;
+    if (!color) return; // ignore unknown values
+
+    counts[value] = (counts[value] || 0) + 1;
     totalIncluded++;
   });
 
   const labels = Object.keys(counts);
   const data = labels.map(label => counts[label]);
-  const colors = labels.map(label => labelColorMap[label] || '#999999');
+  const colors = labels.map(label => labelColorMap[label]);
 
   console.log(`📊 Chart: ${chartTitle}`);
   console.log(`Included ${totalIncluded} tasks`);
