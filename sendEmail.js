@@ -5,12 +5,20 @@ const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
 const { generatePieChart } = require('./generateCharts');
 const createPDF = require('./createPDF');
 function findFieldNameByKeyword(fieldNames, keyword) {
-  const normalizedKeyword = keyword.toLowerCase().replace(/\s+/g, ' ').trim();
+  const normalize = str =>
+    str.toLowerCase().replace(/[\s\-–—]+/g, ' ').trim(); // normalize spaces & dashes
 
-  return fieldNames.find(name => {
-    const normalizedName = name.toLowerCase().replace(/\s+/g, ' ').trim();
-    return normalizedName.includes(normalizedKeyword);
-  });
+  const normalizedKeyword = normalize(keyword);
+
+  const matched = fieldNames.find(name =>
+    normalize(name).includes(normalizedKeyword)
+  );
+
+  if (!matched) {
+    console.warn(`⚠️ Could not match field for keyword "${keyword}"`);
+  }
+
+  return matched;
 }
 
 async function sendReport() {
