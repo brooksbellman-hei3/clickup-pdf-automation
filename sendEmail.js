@@ -101,18 +101,29 @@ async function generateAllCharts(tasks) {
 
 async function generateFixedColorCustomFieldChart(tasks, fieldName, chartTitle, index) {
   const counts = {};
-  const labelColorMap = {
-    'green': '#00FF00',
-    'orange': '#FFA500',
-    'red': '#FF0000',
-    'black': '#000000'
+  const colorMap = {
+  'Green': '#28a745',
+  'Orange': '#fd7e14',
+  'Red': '#dc3545',
+  'Black': '#000000'
   };
 
   let totalIncluded = 0;
 
   tasks.forEach((task, i) => {
     const field = task.custom_fields?.find(f => f.name === fieldName);
-    const rawValue = field?.value;
+    if (!field || field.value == null) continue;
+
+let value;
+
+if (field.type === 'drop_down' && Array.isArray(field.type_config?.options)) {
+  const option = field.type_config.options[field.value];
+  value = option?.name?.trim();
+} else if (typeof field.value === 'string') {
+  value = field.value.trim();
+}
+
+if (!value) continue; // skip if still invalid
     console.log(`[DEBUG:RAW] Field object for "${fieldName}":`, field);
 
     // ✅ Log for debugging
