@@ -69,7 +69,7 @@ async function generateAllCharts(tasks) {
   console.log("\n🧩 Detected custom fields:", fieldNames);
 
   // 🧠 Dynamically resolve actual field names
-  const viewerFieldName = findFieldNameByKeyword(fieldNames, "viewer status at tipoff");
+  const viewerFieldName = findFieldNameByKeyword(fieldNames, "viewer status at tip-off wnba");
   const tabletFieldName = findFieldNameByKeyword(fieldNames, "overall tablet");
 
   console.log("🔍 Matched field name for viewer status:", viewerFieldName);
@@ -113,6 +113,7 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, chartTitle, 
   tasks.forEach((task, i) => {
     const field = task.custom_fields?.find(f => f.name === fieldName);
     const rawValue = field?.value;
+    console.log(`[DEBUG:RAW] Field object for "${fieldName}":`, field);
 
     // ✅ Log for debugging
     if (i < 5) {
