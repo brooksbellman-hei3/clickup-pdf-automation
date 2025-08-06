@@ -50,6 +50,11 @@ async function generatePieChart(title, labels, data, colors, index) {
       }
     }
   };
+console.log(`[CHART DEBUG] Final render for "${title}"`);
+console.log('Labels:', labels);
+console.log('Data:', data);
+console.log('Colors:', colors);
+
 
   return await chartJSNodeCanvas.renderToBuffer(config);
 }
