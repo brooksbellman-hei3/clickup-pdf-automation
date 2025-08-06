@@ -4,6 +4,11 @@ const fs = require('fs');
 const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
 const { generatePieChart } = require('./generateCharts');
 const createPDF = require('./createPDF');
+function findFieldNameByKeyword(fieldNames, keyword) {
+  return fieldNames.find(name =>
+    name.toLowerCase().includes(keyword.toLowerCase())
+  );
+}
 
 async function sendReport() {
   console.log("📊 Starting report generation...");
@@ -43,29 +48,42 @@ async function sendReport() {
 async function generateAllCharts(tasks) {
   const charts = [];
 
-  // 🔍 DEBUG: Show custom fields from a few tasks
-  tasks.slice(0, 5).forEach((task, i) => {
-    console.log(`\n🔎 Task ${i + 1}: "${task.name}"`);
-    task.custom_fields?.forEach(f => {
-      console.log(`   - Field: "${f.name}", Value:`, f.value);
-    });
+  // 🔍 Extract all unique custom field names
+  const uniqueFields = new Set();
+  tasks.forEach(task => {
+    task.custom_fields?.forEach(f => uniqueFields.add(f.name));
   });
 
-  const viewerChart = await generateFixedColorCustomFieldChart(
-    tasks,
-    'Viewer Status at Tip-Off - WNBA',
-    'Viewer Status at Tip-Off (WNBA)',
-    0
-  );
-  if (viewerChart) charts.push(viewerChart);
+  const fieldNames = [...uniqueFields];
+  console.log("\n🧩 Detected custom fields:", fieldNames);
 
-  const tabletChart = await generateFixedColorCustomFieldChart(
-    tasks,
-    'Overall Tablet Status',
-    'Overall Tablet Status',
-    1
-  );
-  if (tabletChart) charts.push(tabletChart);
+  // 🧠 Dynamically resolve actual field names
+  const viewerFieldName = findFieldNameByKeyword(fieldNames, "viewer status at tipoff");
+  const tabletFieldName = findFieldNameByKeyword(fieldNames, "overall tablet");
+
+  console.log("🔍 Matched field name for viewer status:", viewerFieldName);
+  console.log("🔍 Matched field name for tablet status:", tabletFieldName);
+
+  // 📊 Generate charts with resolved names (if found)
+  if (viewerFieldName) {
+    const viewerChart = await generateFixedColorCustomFieldChart(
+      tasks,
+      viewerFieldName,
+      'Viewer Status at Tip-Off (WNBA)',
+      0
+    );
+    if (viewerChart) charts.push(viewerChart);
+  }
+
+  if (tabletFieldName) {
+    const tabletChart = await generateFixedColorCustomFieldChart(
+      tasks,
+      tabletFieldName,
+      'Overall Tablet Status',
+      1
+    );
+    if (tabletChart) charts.push(tabletChart);
+  }
 
   return charts;
 }
