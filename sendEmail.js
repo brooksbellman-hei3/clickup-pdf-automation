@@ -81,16 +81,21 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, chartTitle, 
 
   let totalIncluded = 0;
 
-  tasks.forEach(task => {
+  tasks.forEach((task, i) => {
     const field = task.custom_fields?.find(f => f.name === fieldName);
     const rawValue = field?.value;
 
-    if (!rawValue || typeof rawValue !== 'string') return; // skip nulls or invalids
+    // ✅ Log for debugging
+    if (i < 5) {
+      console.log(`[DEBUG] Task ${i + 1} - ${fieldName}:`, rawValue);
+    }
 
-    const value = rawValue.toLowerCase(); // normalize
-    const color = labelColorMap[value];
+    // ✅ Skip if not a string
+    if (typeof rawValue !== 'string') return;
 
-    if (!color) return; // ignore unknown values
+    const value = rawValue.toLowerCase().trim();
+
+    if (!labelColorMap[value]) return; // skip if color not supported
 
     counts[value] = (counts[value] || 0) + 1;
     totalIncluded++;
