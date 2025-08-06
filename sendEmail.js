@@ -101,42 +101,38 @@ async function generateAllCharts(tasks) {
 
 async function generateFixedColorCustomFieldChart(tasks, fieldName, chartTitle, index) {
   const counts = {};
-  const colorMap = {
-  'Green': '#28a745',
-  'Orange': '#fd7e14',
-  'Red': '#dc3545',
-  'Black': '#000000'
+  const labelColorMap = {
+    'Green': '#28a745',
+    'Orange': '#fd7e14',
+    'Red': '#dc3545',
+    'Black': '#000000'
   };
 
   let totalIncluded = 0;
 
   tasks.forEach((task, i) => {
     const field = task.custom_fields?.find(f => f.name === fieldName);
-    if (!field || field.value == null) continue;
+    if (!field || field.value == null) return; // ✅ use return inside forEach
 
-let value;
+    let value;
 
-if (field.type === 'drop_down' && Array.isArray(field.type_config?.options)) {
-  const option = field.type_config.options[field.value];
-  value = option?.name?.trim();
-} else if (typeof field.value === 'string') {
-  value = field.value.trim();
-}
-
-if (!value) continue; // skip if still invalid
-    console.log(`[DEBUG:RAW] Field object for "${fieldName}":`, field);
-
-    // ✅ Log for debugging
-    if (i < 5) {
-      console.log(`[DEBUG] Task ${i + 1} - ${fieldName}:`, rawValue);
+    // 🧠 Resolve label from dropdown field
+    if (field.type === 'drop_down' && Array.isArray(field.type_config?.options)) {
+      const option = field.type_config.options[field.value];
+      value = option?.name?.trim();
+    } else if (typeof field.value === 'string') {
+      value = field.value.trim();
     }
 
-    // ✅ Skip if not a string
-    if (typeof rawValue !== 'string') return;
+    if (!value) return; // skip if still invalid
 
-    const value = rawValue.toLowerCase().trim();
+    // ✅ Debug logs
+    if (i < 5) {
+      console.log(`[DEBUG] Task ${i + 1} - ${fieldName}:`, value);
+      console.log(`[DEBUG:RAW] Field object for "${fieldName}":`, field);
+    }
 
-    if (!labelColorMap[value]) return; // skip if color not supported
+    if (!labelColorMap[value]) return; // skip unsupported values
 
     counts[value] = (counts[value] || 0) + 1;
     totalIncluded++;
