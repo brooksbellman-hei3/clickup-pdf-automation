@@ -1,14 +1,4 @@
 const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-
-// Helper: Convert hex to RGBA for reliable chart rendering
-function hexToRgba(hex) {
-  const bigint = parseInt(hex.replace('#', ''), 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return `rgba(${r}, ${g}, ${b}, 1)`;
-}
-
 const fs = require("fs");
 const path = require("path");
 
@@ -22,14 +12,17 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
     width, 
     height,
-    backgroundColour: 'white' // Ensure white background
+    backgroundColour: 'white', // Ensure white background
+    plugins: {
+      modern: ['chartjs-plugin-datalabels'] // Add data labels plugin if needed
+    }
   });
 
-  // Use hex colors directly instead of RGBA - sometimes PDFKit has issues with RGBA
+  // Ensure all colors are proper hex format
   const hexColors = colors.map(color => {
-    if (color.startsWith('#')) return color;
+    if (color.startsWith('#') && color.length === 7) return color;
     if (color.startsWith('rgba')) {
-      // Convert back to hex if needed
+      // Convert RGBA to hex
       const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
       if (match) {
         const r = parseInt(match[1]);
@@ -48,28 +41,57 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
       datasets: [{
         label: title,
         data,
-        backgroundColor: hexColors, // Use hex instead of RGBA
+        backgroundColor: hexColors,
         borderColor: '#ffffff',
-        borderWidth: 2
+        borderWidth: 2,
+        hoverBorderWidth: 3
       }]
     },
     options: {
       responsive: false,
-      maintainAspectRatio: false, // Changed to false for better control
+      maintainAspectRatio: false,
       animation: false, // Disable animations for server-side rendering
+      layout: {
+        padding: {
+          top: 20,
+          bottom: 20,
+          left: 20,
+          right: 20
+        }
+      },
       plugins: {
         title: {
           display: true,
           text: title,
-          font: { size: 20 },
-          color: '#000000'
+          font: { 
+            size: 20,
+            weight: 'bold'
+          },
+          color: '#000000',
+          padding: {
+            top: 10,
+            bottom: 30
+          }
         },
         legend: {
+          display: true,
           position: "right",
           labels: {
             font: { size: 14 },
-            color: '#000000'
+            color: '#000000',
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle'
           }
+        },
+        tooltip: {
+          enabled: false // Disable tooltips for static image
+        }
+      },
+      elements: {
+        arc: {
+          borderWidth: 2,
+          borderColor: '#ffffff'
         }
       }
     }
@@ -78,13 +100,20 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   try {
     console.log(`🎨 Rendering chart with HEX colors:`, hexColors);
 
-    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+    // Generate the chart buffer
+    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, 'image/png');
     console.log(`📊 Chart buffer size: ${buffer.length} bytes`);
+
+    if (buffer.length === 0) {
+      console.error(`❌ Chart buffer is empty!`);
+      return null;
+    }
 
     const filename = `chart_${index}_${Date.now()}.png`;
     const outputPath = path.join(__dirname, filename);
 
-    fs.writeFileSync(outputPath, buffer);
+    // Write the buffer to file
+    fs.writeFileSync(outputPath, buffer, 'binary');
     
     // Verify the file was written correctly
     if (fs.existsSync(outputPath)) {
@@ -96,6 +125,8 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
       const testBuffer = fs.readFileSync(outputPath);
       if (testBuffer.length !== buffer.length) {
         console.warn(`⚠️ File size mismatch: written=${buffer.length}, read=${testBuffer.length}`);
+      } else {
+        console.log(`✅ File verification passed`);
       }
     } else {
       console.error(`❌ Failed to save chart file: ${outputPath}`);
@@ -128,12 +159,25 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
     'Black': '#343a40',
     'black': '#343a40',
     'BLACK': '#343a40',
+    'Black: Non-Delivery': '#6c757d', // Different shade for non-delivery
     'Gray': '#6c757d',
     'gray': '#6c757d',
     'GRAY': '#6c757d',
     'Grey': '#6c757d',
     'grey': '#6c757d',
-    'GREY': '#6c757d'
+    'GREY': '#6c757d',
+    'Blue': '#007bff',
+    'blue': '#007bff',
+    'BLUE': '#007bff',
+    'Yellow': '#ffc107',
+    'yellow': '#ffc107',
+    'YELLOW': '#ffc107',
+    'Purple': '#6f42c1',
+    'purple': '#6f42c1',
+    'PURPLE': '#6f42c1',
+    'Pink': '#e83e8c',
+    'pink': '#e83e8c',
+    'PINK': '#e83e8c'
   };
 
   const counts = {};
