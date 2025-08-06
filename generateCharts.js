@@ -1,6 +1,7 @@
 const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
 const fs = require("fs");
 const path = require("path");
+const sharp = require('sharp');
 
 async function generatePieChart(title, labels, data, colors, index = 0) {
   console.log(`\n🎨 Generating pie chart: "${title}"`);
@@ -13,6 +14,7 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     width, 
     height,
     backgroundColour: 'white', // Ensure white background
+    type: 'image/png',
     plugins: {
       modern: ['chartjs-plugin-datalabels'] // Add data labels plugin if needed
     }
@@ -113,7 +115,9 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     const outputPath = path.join(__dirname, filename);
 
     // Write the buffer to file
-    fs.writeFileSync(outputPath, buffer, 'binary');
+    const jpegBuffer = await sharp(buffer).jpeg().toBuffer();
+    fs.writeFileSync(outputPath, jpegBuffer);
+
     
     // Verify the file was written correctly
     if (fs.existsSync(outputPath)) {
