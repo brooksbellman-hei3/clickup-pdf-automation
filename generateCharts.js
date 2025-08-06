@@ -22,13 +22,26 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
     width, 
     height,
-    backgroundColour: 'white' // Ensure white background
+    backgroundColour: 'white', // Ensure white background
+    plugins: {
+      modern: ['chartjs-adapter-date-fns'], // Sometimes needed for compatibility
+      requireLegacy: ['chartjs-plugin-datalabels'] // Fallback plugins
+    }
   });
 
-  // Convert colors to RGBA format for better compatibility
-  const rgbaColors = colors.map(color => {
-    if (color.startsWith('rgba')) return color;
-    if (color.startsWith('#')) return hexToRgba(color);
+  // Use hex colors directly instead of RGBA - sometimes PDFKit has issues with RGBA
+  const hexColors = colors.map(color => {
+    if (color.startsWith('#')) return color;
+    if (color.startsWith('rgba')) {
+      // Convert back to hex if needed
+      const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      }
+    }
     return color;
   });
 
@@ -39,14 +52,15 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
       datasets: [{
         label: title,
         data,
-        backgroundColor: rgbaColors,
+        backgroundColor: hexColors, // Use hex instead of RGBA
         borderColor: '#ffffff',
         borderWidth: 2
       }]
     },
     options: {
       responsive: false,
-      maintainAspectRatio: true,
+      maintainAspectRatio: false, // Changed to false for better control
+      animation: false, // Disable animations for server-side rendering
       plugins: {
         title: {
           display: true,
@@ -66,12 +80,7 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   };
 
   try {
-    console.log(`🎨 Rendering chart with configuration:`, JSON.stringify({
-      type: configuration.type,
-      labels: configuration.data.labels,
-      data: configuration.data.datasets[0].data,
-      backgroundColor: configuration.data.datasets[0].backgroundColor
-    }, null, 2));
+    console.log(`🎨 Rendering chart with HEX colors:`, hexColors);
 
     const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
     console.log(`📊 Chart buffer size: ${buffer.length} bytes`);
@@ -85,7 +94,13 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     if (fs.existsSync(outputPath)) {
       const stats = fs.statSync(outputPath);
       console.log(`✅ Chart saved: ${outputPath} (${stats.size} bytes)`);
-      console.log(`🎨 Colors used: ${rgbaColors.join(', ')}`);
+      console.log(`🎨 HEX Colors used: ${hexColors.join(', ')}`);
+      
+      // Additional verification - try to read the file back
+      const testBuffer = fs.readFileSync(outputPath);
+      if (testBuffer.length !== buffer.length) {
+        console.warn(`⚠️ File size mismatch: written=${buffer.length}, read=${testBuffer.length}`);
+      }
     } else {
       console.error(`❌ Failed to save chart file: ${outputPath}`);
       return null;
