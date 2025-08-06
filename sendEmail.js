@@ -46,11 +46,6 @@ async function sendReport() {
 
   await emailReport(chartPaths, tasks.length);
 
-  if (fs.existsSync(pdfPath)) {
-    fs.unlinkSync(pdfPath);
-    console.log("🧹 Cleaned up temporary PDF file");
-  }
-
   chartPaths.forEach(p => {
     if (fs.existsSync(p)) fs.unlinkSync(p);
   });
