@@ -1,49 +1,44 @@
 const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-const fs = require('fs');
-const path = require('path');
 
-const width = 800;
-const height = 600;
+async function generatePieChart(title, labels, data, colors, index) {
+  const width = 800;
+  const height = 600;
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
 
-const chartJSNodeCanvas = new ChartJSNodeCanvas({
-  width,
-  height,
-  chartCallback: (ChartJS) => {
-    ChartJS.defaults.font.family = 'Arial';
-  }
-});
-
-async function generatePieChart(title, labels, data, colors, index = 0) {
-  const configuration = {
+  const config = {
     type: 'pie',
     data: {
-      labels,
+      labels: labels,
       datasets: [{
         label: title,
-        data,
+        data: data,
         backgroundColor: colors,
-      }],
+        borderColor: '#ffffff',
+        borderWidth: 2
+      }]
     },
     options: {
+      responsive: false,
       plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: '#000',
+            font: {
+              size: 14
+            }
+          }
+        },
         title: {
           display: true,
           text: title,
           font: {
-            size: 16
+            size: 20
           }
-        },
-        legend: {
-          position: 'bottom'
         }
-      },
-    },
+      }
+    }
   };
 
-  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, 'image/png');
-  const filePath = path.join('/tmp', `chart-${index}-${title.replace(/\s+/g, '_')}.png`);
-  fs.writeFileSync(filePath, buffer);
-  return filePath;
+  return await chartJSNodeCanvas.renderToBuffer(config);
 }
-
-module.exports = { generatePieChart };
