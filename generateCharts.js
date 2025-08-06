@@ -13,10 +13,17 @@ const fs = require("fs");
 const path = require("path");
 
 async function generatePieChart(title, labels, data, colors, index = 0) {
+  console.log(`\n🎨 Generating pie chart: "${title}"`);
+  console.log(`📊 Input data:`, { labels, data, colors });
+
   const width = 800;
   const height = 600;
 
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
+    width, 
+    height,
+    backgroundColour: 'white' // Ensure white background
+  });
 
   // Convert colors to RGBA format for better compatibility
   const rgbaColors = colors.map(color => {
@@ -38,34 +45,58 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
       }]
     },
     options: {
+      responsive: false,
+      maintainAspectRatio: true,
       plugins: {
         title: {
           display: true,
           text: title,
-          font: { size: 20 }
+          font: { size: 20 },
+          color: '#000000'
         },
         legend: {
           position: "right",
           labels: {
-            font: { size: 14 }
+            font: { size: 14 },
+            color: '#000000'
           }
         }
-      },
-      responsive: false,
-      maintainAspectRatio: true
+      }
     }
   };
 
-  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+  try {
+    console.log(`🎨 Rendering chart with configuration:`, JSON.stringify({
+      type: configuration.type,
+      labels: configuration.data.labels,
+      data: configuration.data.datasets[0].data,
+      backgroundColor: configuration.data.datasets[0].backgroundColor
+    }, null, 2));
 
-  const filename = `chart_${index}_${Date.now()}.png`;
-  const outputPath = path.join(__dirname, filename);
+    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+    console.log(`📊 Chart buffer size: ${buffer.length} bytes`);
 
-  fs.writeFileSync(outputPath, buffer);
-  console.log(`✅ Chart saved: ${outputPath}`);
-  console.log(`🎨 Colors used: ${rgbaColors.join(', ')}`);
-  
-  return outputPath;
+    const filename = `chart_${index}_${Date.now()}.png`;
+    const outputPath = path.join(__dirname, filename);
+
+    fs.writeFileSync(outputPath, buffer);
+    
+    // Verify the file was written correctly
+    if (fs.existsSync(outputPath)) {
+      const stats = fs.statSync(outputPath);
+      console.log(`✅ Chart saved: ${outputPath} (${stats.size} bytes)`);
+      console.log(`🎨 Colors used: ${rgbaColors.join(', ')}`);
+    } else {
+      console.error(`❌ Failed to save chart file: ${outputPath}`);
+      return null;
+    }
+    
+    return outputPath;
+  } catch (error) {
+    console.error(`❌ Error generating chart:`, error.message);
+    console.error(error.stack);
+    return null;
+  }
 }
 
 // Custom pie chart from a field with known fixed labels/colors
