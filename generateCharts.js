@@ -9,54 +9,48 @@ function hexToRgba(hex) {
   return `rgba(${r}, ${g}, ${b}, 1)`;
 }
 
-async function generatePieChart(title, labels, data, colors, index) {
+const fs = require("fs");
+const path = require("path");
+
+async function generatePieChart(title, labels, data, colors, index = 0) {
   const width = 800;
   const height = 600;
+
   const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
 
-  const rgbaColors = colors.map(hex => hexToRgba(hex));
-
-  const config = {
-    type: 'pie',
+  const configuration = {
+    type: "pie",
     data: {
-      labels: labels,
+      labels,
       datasets: [{
         label: title,
-        data: data,
-        backgroundColor: rgbaColors,
+        data,
+        backgroundColor: colors,
         borderColor: '#ffffff',
-        borderWidth: 2
+        borderWidth: 1
       }]
     },
     options: {
-      responsive: false,
       plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: '#000',
-            font: {
-              size: 14
-            }
-          }
-        },
         title: {
           display: true,
           text: title,
-          font: {
-            size: 20
-          }
+          font: { size: 20 }
+        },
+        legend: {
+          position: "right"
         }
       }
     }
   };
-console.log(`[CHART DEBUG] Final render for "${title}"`);
-console.log('Labels:', labels);
-console.log('Data:', data);
-console.log('Colors:', colors);
 
+  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
 
-  return await chartJSNodeCanvas.renderToBuffer(config);
+  const filename = `chart_${index}_${Date.now()}.png`;
+  const outputPath = path.join(__dirname, filename);
+
+  fs.writeFileSync(outputPath, buffer);
+  return outputPath;
 }
 
 // Custom pie chart from a field with known fixed labels/colors
