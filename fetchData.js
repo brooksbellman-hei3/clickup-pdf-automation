@@ -424,7 +424,7 @@ async function fetchAllClickUpTasksFromTeam() {
           subtasks: true,
           page: page,
           order_by: 'created',
-          reverse: false
+          reverse: true
         };
         
         const response = await axios.get(url, {
