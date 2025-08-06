@@ -1,7 +1,7 @@
 const axios = require("axios");
 const { diagnoseClickUpStructure } = require('./diagnostic');
 
-async function fetchClickUpTasks(specificListId = null, specificFolderId = null) {
+async function fetchClickUpTasks(specificListId = null, specificFolderId = null, skipDateFilter = false) {
   const token = process.env.CLICKUP_API_TOKEN;
   const teamId = process.env.CLICKUP_TEAM_ID;
   const listId = specificListId || process.env.CLICKUP_LIST_ID;
@@ -26,7 +26,7 @@ async function fetchClickUpTasks(specificListId = null, specificFolderId = null)
       url = `https://api.clickup.com/api/v2/folder/${folderId}/task`;
       searchDescription = `folder: ${folderId}`;
     } else if (listId) {
-      // Search by specific list
+      // Search by specific list - use the direct list endpoint
       url = `https://api.clickup.com/api/v2/list/${listId}/task`;
       searchDescription = `list: ${listId}`;
     } else {
@@ -35,34 +35,36 @@ async function fetchClickUpTasks(specificListId = null, specificFolderId = null)
     }
     
     console.log(`🔗 Fetching tasks from ${searchDescription}`);
+    console.log(`📍 Using URL: ${url}`);
     
     const allTasks = [];
     let page = 0;
-    const perPage = 100;
     let hasMore = true;
     
     while (hasMore) {
       try {
         console.log(`📡 Fetching page ${page}... (${allTasks.length} tasks so far)`);
         
-        const teamSearchUrl = `https://api.clickup.com/api/v2/team/${teamId}/task`;
-
+        // Use consistent parameters for list endpoint
         const params = {
-          archived: true,
-          include_closed: true,
-          subtasks: true,
+          archived: false,          // Start with false to get active tasks first
+          include_closed: true,     // Include closed tasks
+          subtasks: true,          // Include subtasks
           include_markdown_description: false,
           page: page,
           order_by: 'created',
-          reverse: false,
-          list_ids: [listId], // ← ensures you still filter to the correct list
-          statuses: ['to do', 'complete', 'in progress', 'review'],
+          reverse: false
         };
         
-        const response = await axios.get(teamSearchUrl, {
+        // If using list endpoint, don't include list_ids parameter
+        // If using team endpoint, include list_ids parameter
+        
+        console.log(`🔧 Using params:`, JSON.stringify(params, null, 2));
+        
+        const response = await axios.get(url, {
             headers,
             params,
-            timeout: 30000,
+            timeout: 60000,  // Increase timeout
         });
 
         const data = response.data;
@@ -71,180 +73,82 @@ async function fetchClickUpTasks(specificListId = null, specificFolderId = null)
         console.log(`📄 Retrieved ${batch.length} tasks on page ${page}`);
         
         if (batch.length === 0) {
+          console.log(`📋 No more tasks found on page ${page}`);
           hasMore = false;
           break;
         }
         
         allTasks.push(...batch);
         
-        // Check if we got fewer tasks than the page size, indicating we're at the end
-        if (batch.length < perPage) {
+        // ClickUp typically returns up to 100 tasks per page
+        // If we get less than 100, we're likely at the end
+        if (batch.length < 100) {
+          console.log(`📋 Got ${batch.length} tasks (less than 100), likely at end`);
           hasMore = false;
         } else {
           page++;
         }
         
         // Add a small delay to be respectful to the API
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
       } catch (error) {
         console.error(`❌ Error fetching page ${page}:`, error.message);
         
         // If it's a rate limit error, wait and retry
         if (error.response?.status === 429) {
-          console.log("⏳ Rate limited, waiting 5 seconds...");
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          console.log("⏳ Rate limited, waiting 10 seconds...");
+          await new Promise(resolve => setTimeout(resolve, 10000));
           continue; // Retry the same page
         }
         
-        // For other errors, break the loop
-        break;
+        // For other errors, log but continue if we have some tasks
+        if (error.response?.status) {
+          console.error(`HTTP ${error.response.status}: ${error.response.data?.err || 'Unknown error'}`);
+        }
+        
+        // If we have some tasks, continue; otherwise break
+        if (allTasks.length > 0) {
+          console.log(`⚠️ Error on page ${page}, but continuing with ${allTasks.length} tasks found so far`);
+          break;
+        } else {
+          throw error; // Re-throw if we have no tasks yet
+        }
       }
     }
 
     console.log(`✅ Total fetched: ${allTasks.length} tasks`);
 
+    // Now try to get archived tasks if we're still missing a lot
+    if (allTasks.length < 1000) { // Adjust this threshold as needed
+      console.log(`\n🗄️ Fetching archived tasks to get more data...`);
+      try {
+        const archivedTasks = await fetchArchivedTasks(url, headers);
+        allTasks.push(...archivedTasks);
+        console.log(`✅ Total after including archived: ${allTasks.length} tasks`);
+      } catch (archiveError) {
+        console.log(`⚠️ Could not fetch archived tasks: ${archiveError.message}`);
+      }
+    }
+
     // Run diagnostic if we got very few tasks
-    if (allTasks.length <= 10) {
+    if (allTasks.length <= 100) {
       console.log('\n🔍 Running diagnostic to find more tasks...');
       await diagnoseClickUpStructure();
     }
 
-    // 🔍 DEBUG: Show all custom field names in the first few tasks
-    console.log("\n🔍 DEBUGGING CUSTOM FIELDS:");
-    allTasks.slice(0, 3).forEach((task, index) => {
-      console.log(`\n📋 Task ${index + 1}: "${task.name}"`);
-      console.log(`   Custom fields (${task.custom_fields?.length || 0} total):`);
-      
-      if (task.custom_fields && task.custom_fields.length > 0) {
-        task.custom_fields.forEach(field => {
-          console.log(`   - "${field.name}": ${field.value} (type: ${field.type})`);
-        });
-      } else {
-        console.log("   - No custom fields found");
-      }
-    });
+    // 🔍 DEBUG: Show custom field analysis
+    console.log("\n🔍 ANALYZING CUSTOM FIELDS:");
+    analyzeCustomFields(allTasks.slice(0, 5)); // Analyze first 5 tasks
 
-    // 🔍 DEBUG: Look for all possible Event Date variations
-    console.log("\n🔍 SEARCHING FOR EVENT DATE FIELDS:");
-    const eventDateVariations = [];
-    allTasks.forEach(task => {
-      task.custom_fields?.forEach(field => {
-        if (field.name.toLowerCase().includes('event') || 
-            field.name.toLowerCase().includes('date')) {
-          eventDateVariations.push({
-            name: field.name,
-            value: field.value,
-            type: field.type
-          });
-        }
-      });
-    });
-
-    // Remove duplicates and show unique field names
-    const uniqueFields = [...new Map(eventDateVariations.map(item => [item.name, item])).values()];
-    uniqueFields.forEach(field => {
-      console.log(`   Found: "${field.name}" = ${field.value} (type: ${field.type})`);
-    });
-
-    // 🔍 Let's try different date ranges to see what we find
-    // 🔍 TESTING DIFFERENT DATE RANGES:
-console.log("\n🔍 TESTING DIFFERENT DATE RANGES:");
-
-const veryStart = Date.UTC(2024, 0, 1); // Jan 1, 2024 UTC
-const veryEnd = Date.UTC(2025, 11, 31, 23, 59, 59); // Dec 31, 2025 UTC
-
-console.log(`Wide range: ${new Date(veryStart).toUTCString()} to ${new Date(veryEnd).toUTCString()}`);
-
-const wideFilterTasks = allTasks.filter(task => {
-  const field = task.custom_fields?.find(f => f.name === 'End of Game Time');
-  if (!field || !field.value) return false;
-
-  let raw = field.value?.date || field.value;
-  let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
-
-  if (timestamp < 1000000000000) timestamp *= 1000;
-
-  const isInRange = timestamp >= veryStart && timestamp <= veryEnd;
-  if (isInRange) {
-    console.log(`   ✅ Found: "${task.name}" - UTC: ${new Date(timestamp).toUTCString()}`);
-  }
-
-  return isInRange;
-});
-
-console.log(`📊 Wide range found: ${wideFilterTasks.length} tasks`);
-
-// 🎯 Filter to specific UTC range
-console.log(`🎯 Your original range: 2025-04-01 to 2025-07-31`);
-console.log(`🔍 Filtering by "End of Game Time"...`);
-
-const start = Date.UTC(2025, 3, 1); // April 1, 2025
-const end = Date.UTC(2025, 6, 31, 23, 59, 59); // July 31, 2025
-
-const filteredTasks = allTasks.filter(task => {
-  const field = task.custom_fields?.find(f => f.name === 'End of Game Time');
-  if (!field || !field.value) return false;
-
-  let raw = field.value?.date || field.value;
-  let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
-
-  if (timestamp < 1000000000000) timestamp *= 1000;
-  if (isNaN(timestamp)) return false;
-
-  return timestamp >= start && timestamp <= end;
-});
-
-  const missedTasks = allTasks.length - filteredTasks.length;
-console.log(`⚠️ ${missedTasks} tasks were excluded by the filter`);
-
-if (missedTasks > 0) {
-  console.log("🔍 Example of skipped tasks (up to 5):");
-  allTasks.slice(0, 5).forEach(task => {
-    const field = task.custom_fields?.find(f => f.name === 'End of Game Time');
-    const raw = field?.value?.date || field?.value;
-    let timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
-    if (timestamp < 1000000000000) timestamp *= 1000;
-
-    console.log(`   - "${task.name}" → ${new Date(timestamp).toUTCString()}`);
-});
-}
-
-
-    console.log(`✅ Tasks matching filter: ${filteredTasks.length}`);
-
-    // If no tasks found, show some suggestions
-    if (filteredTasks.length === 0 && allTasks.length > 0) {
-      console.log("\n💡 SUGGESTIONS:");
-      console.log("1. Check if the custom field name is exactly 'Event Date'");
-      console.log("2. Verify your date range (April 1 - July 31, 2025)");
-      console.log("3. Check if dates are stored in a different format");
-      
-      // Show what dates we actually found
-      if (wideFilterTasks.length > 0) {
-        console.log("4. Here are the actual dates found in your tasks:");
-        wideFilterTasks.slice(0, 5).forEach(task => {
-          const eventField = task.custom_fields?.find(field => {
-            const lowerName = field.name?.toLowerCase() || '';
-            return lowerName.includes('event') && lowerName.includes('date');
-          });
-          if (eventField) {
-            const rawTimestamp = eventField?.value?.date;
-            if (!rawTimestamp || isNaN(rawTimestamp)) {
-              return;
-            }
-            let timestamp = parseInt(rawTimestamp);
-            if (timestamp < 1000000000000) {
-              timestamp = timestamp * 1000;
-            }
-
-            console.log(`   - "${task.name}": ${new Date(timestamp).toDateString()}`);
-          }
-        });
-      }
+    // Apply date filtering only if requested and not skipped
+    if (!skipDateFilter) {
+      console.log("\n🎯 APPLYING DATE FILTERS...");
+      return applyDateFilters(allTasks);
+    } else {
+      console.log("\n⏭️ Skipping date filters, returning all tasks");
+      return allTasks;
     }
-
-    return filteredTasks;
 
   } catch (error) {
     console.error("❌ Error fetching ClickUp tasks:");
@@ -258,6 +162,181 @@ if (missedTasks > 0) {
   }
 }
 
+// Helper function to fetch archived tasks
+async function fetchArchivedTasks(baseUrl, headers) {
+  console.log("🗄️ Fetching archived tasks...");
+  const archivedTasks = [];
+  let page = 0;
+  let hasMore = true;
+  
+  while (hasMore && page < 10) { // Limit archived pages to prevent infinite loops
+    try {
+      const params = {
+        archived: true,
+        include_closed: true,
+        subtasks: true,
+        page: page,
+        order_by: 'created',
+        reverse: false
+      };
+      
+      const response = await axios.get(baseUrl, {
+        headers,
+        params,
+        timeout: 60000,
+      });
+
+      const batch = response.data.tasks || [];
+      console.log(`📦 Retrieved ${batch.length} archived tasks on page ${page}`);
+      
+      if (batch.length === 0) {
+        hasMore = false;
+      } else {
+        archivedTasks.push(...batch);
+        if (batch.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+    } catch (error) {
+      console.log(`⚠️ Error fetching archived page ${page}: ${error.message}`);
+      break;
+    }
+  }
+  
+  return archivedTasks;
+}
+
+// Helper function to analyze custom fields
+function analyzeCustomFields(tasks) {
+  const fieldAnalysis = {};
+  
+  tasks.forEach((task, index) => {
+    console.log(`\n📋 Task ${index + 1}: "${task.name.substring(0, 50)}..."`);
+    
+    if (task.custom_fields && task.custom_fields.length > 0) {
+      task.custom_fields.forEach(field => {
+        if (!fieldAnalysis[field.name]) {
+          fieldAnalysis[field.name] = {
+            type: field.type,
+            hasValue: 0,
+            noValue: 0,
+            sampleValues: []
+          };
+        }
+        
+        if (field.value !== undefined && field.value !== null && field.value !== '') {
+          fieldAnalysis[field.name].hasValue++;
+          if (fieldAnalysis[field.name].sampleValues.length < 3) {
+            fieldAnalysis[field.name].sampleValues.push(field.value);
+          }
+        } else {
+          fieldAnalysis[field.name].noValue++;
+        }
+      });
+    }
+  });
+
+  // Show analysis for date-related fields
+  console.log("\n📊 DATE FIELD ANALYSIS:");
+  Object.keys(fieldAnalysis).forEach(fieldName => {
+    if (fieldName.toLowerCase().includes('date') || fieldName.toLowerCase().includes('time')) {
+      const analysis = fieldAnalysis[fieldName];
+      console.log(`   📅 "${fieldName}": ${analysis.hasValue} with values, ${analysis.noValue} without`);
+      if (analysis.sampleValues.length > 0) {
+        console.log(`      Sample values: ${analysis.sampleValues.join(', ')}`);
+      }
+    }
+  });
+}
+
+// Helper function to apply date filters
+function applyDateFilters(allTasks) {
+  console.log(`🔍 Applying date filters to ${allTasks.length} tasks...`);
+  
+  // Define date range (April 1 - July 31, 2025)
+  const start = Date.UTC(2025, 3, 1); // April 1, 2025
+  const end = Date.UTC(2025, 6, 31, 23, 59, 59); // July 31, 2025
+  
+  console.log(`📅 Date range: ${new Date(start).toUTCString()} to ${new Date(end).toUTCString()}`);
+  
+  // Try multiple date field options
+  const dateFields = ['End of Game Time', 'Event Date', 'date_created', 'date_updated'];
+  
+  let bestField = null;
+  let bestFieldTasks = [];
+  
+  dateFields.forEach(fieldName => {
+    console.log(`\n🔍 Trying field: "${fieldName}"`);
+    
+    const filteredTasks = allTasks.filter(task => {
+      let timestamp = null;
+      
+      if (fieldName === 'date_created' || fieldName === 'date_updated') {
+        // Built-in ClickUp fields
+        timestamp = parseInt(task[fieldName]);
+      } else {
+        // Custom fields
+        const field = task.custom_fields?.find(f => f.name === fieldName);
+        if (!field || !field.value) return false;
+        
+        const raw = field.value?.date || field.value;
+        timestamp = typeof raw === 'string' ? parseInt(raw) : raw;
+      }
+      
+      if (!timestamp || isNaN(timestamp)) return false;
+      
+      // Ensure timestamp is in milliseconds
+      if (timestamp < 1000000000000) timestamp *= 1000;
+      
+      return timestamp >= start && timestamp <= end;
+    });
+    
+    console.log(`   Found ${filteredTasks.length} tasks in date range for "${fieldName}"`);
+    
+    if (filteredTasks.length > bestFieldTasks.length) {
+      bestField = fieldName;
+      bestFieldTasks = filteredTasks;
+    }
+  });
+  
+  if (bestField) {
+    console.log(`\n✅ Best field: "${bestField}" with ${bestFieldTasks.length} tasks`);
+    return bestFieldTasks;
+  } else {
+    console.log(`\n⚠️ No tasks found in date range. Showing sample dates from all tasks:`);
+    
+    // Show sample dates to help debug
+    allTasks.slice(0, 10).forEach((task, i) => {
+      const eventDateField = task.custom_fields?.find(f => f.name === 'Event Date');
+      const endGameField = task.custom_fields?.find(f => f.name === 'End of Game Time');
+      
+      console.log(`   Task ${i+1}: "${task.name.substring(0, 30)}..."`);
+      console.log(`      Created: ${new Date(parseInt(task.date_created)).toDateString()}`);
+      if (eventDateField?.value) {
+        const ts = parseInt(eventDateField.value) * (eventDateField.value < 1000000000000 ? 1000 : 1);
+        console.log(`      Event Date: ${new Date(ts).toDateString()}`);
+      }
+      if (endGameField?.value) {
+        const ts = parseInt(endGameField.value) * (endGameField.value < 1000000000000 ? 1000 : 1);
+        console.log(`      End Game: ${new Date(ts).toDateString()}`);
+      }
+    });
+    
+    return [];
+  }
+}
+
+// Function to fetch ALL tasks without any filters (for testing)
+async function fetchAllTasksNoFilter(specificListId = null) {
+  console.log("🌍 FETCHING ALL TASKS WITH NO FILTERS...");
+  return await fetchClickUpTasks(specificListId, null, true); // skipDateFilter = true
+}
+
 // Function to fetch tasks from multiple lists or folders
 async function fetchTasksFromMultipleSources(sources) {
   const allTasks = [];
@@ -267,9 +346,9 @@ async function fetchTasksFromMultipleSources(sources) {
     
     let tasks = [];
     if (source.type === 'list') {
-      tasks = await fetchClickUpTasks(null, '49761976');
+      tasks = await fetchClickUpTasks(source.id, null);
     } else if (source.type === 'folder') {
-      tasks = await fetchClickUpTasks(null, '115513192');
+      tasks = await fetchClickUpTasks(null, source.id);
     }
     
     console.log(`📊 Found ${tasks.length} tasks in ${source.name}`);
@@ -278,93 +357,6 @@ async function fetchTasksFromMultipleSources(sources) {
   
   console.log(`\n✅ Total tasks from all sources: ${allTasks.length}`);
   return allTasks;
-}
-
-// Alternative function to fetch ALL tasks from multiple lists if needed
-async function fetchAllClickUpTasks() {
-  const token = process.env.CLICKUP_API_TOKEN;
-  const teamId = process.env.CLICKUP_TEAM_ID;
-
-  if (!teamId || !token) {
-    console.error("❌ Missing ClickUp configuration: TEAM_ID or API_TOKEN");
-    return [];  
-  }
-
-  const headers = { 
-    'Authorization': token,
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    console.log(`🔗 Fetching ALL tasks from team: ${teamId}`);
-    
-    const allTasks = [];
-    let page = 0;
-    const perPage = 100;
-    let hasMore = true;
-    
-    while (hasMore) {
-      try {
-        console.log(`📡 Fetching page ${page}... (${allTasks.length} tasks so far)`);
-        
-        // Use team endpoint to get ALL tasks
-        const url = `https://api.clickup.com/api/v2/team/${teamId}/task`;
-        
-        const response = await axios.get(url, {
-          headers,
-          params: {
-            archived: false,
-            include_closed: true,
-            subtasks: true,
-            page: page,
-            order_by: 'created',
-            reverse: false
-          },
-          timeout: 30000
-        });
-
-        const data = response.data;
-        const batch = data.tasks || [];
-
-        console.log(`📄 Retrieved ${batch.length} tasks on page ${page}`);
-        
-        if (batch.length === 0) {
-          hasMore = false;
-          break;
-        }
-        
-        allTasks.push(...batch);
-        
-        // Check if we got fewer tasks than the page size
-        if (batch.length < perPage) {
-          hasMore = false;
-        } else {
-          page++;
-        }
-        
-        // Add a small delay to be respectful to the API
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-      } catch (error) {
-        console.error(`❌ Error fetching page ${page}:`, error.message);
-        
-        if (error.response?.status === 429) {
-          console.log("⏳ Rate limited, waiting 5 seconds...");
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          continue;
-        }
-        
-        break;
-      }
-    }
-
-    console.log(`✅ Total fetched from entire team: ${allTasks.length} tasks`);
-    return allTasks;
-
-  } catch (error) {
-    console.error("❌ Error fetching all ClickUp tasks:", error.message);
-    return [];
-  }
 }
 
 async function testClickUpConnection() {
@@ -397,9 +389,98 @@ async function testClickUpConnection() {
   }
 }
 
+// Alternative function to fetch ALL tasks from team (if list approach fails)
+async function fetchAllClickUpTasksFromTeam() {
+  const token = process.env.CLICKUP_API_TOKEN;
+  const teamId = process.env.CLICKUP_TEAM_ID;
+
+  if (!teamId || !token) {
+    console.error("❌ Missing ClickUp configuration: TEAM_ID or API_TOKEN");
+    return [];  
+  }
+
+  const headers = { 
+    'Authorization': token,
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    console.log(`🔗 Fetching ALL tasks from team: ${teamId}`);
+    
+    const allTasks = [];
+    let page = 0;
+    let hasMore = true;
+    
+    while (hasMore && page < 50) { // Safety limit
+      try {
+        console.log(`📡 Fetching team page ${page}... (${allTasks.length} tasks so far)`);
+        
+        // Use team endpoint to get ALL tasks
+        const url = `https://api.clickup.com/api/v2/team/${teamId}/task`;
+        
+        const params = {
+          archived: false,
+          include_closed: true,
+          subtasks: true,
+          page: page,
+          order_by: 'created',
+          reverse: false
+        };
+        
+        const response = await axios.get(url, {
+          headers,
+          params,
+          timeout: 60000
+        });
+
+        const data = response.data;
+        const batch = data.tasks || [];
+
+        console.log(`📄 Retrieved ${batch.length} tasks on page ${page}`);
+        
+        if (batch.length === 0) {
+          hasMore = false;
+          break;
+        }
+        
+        allTasks.push(...batch);
+        
+        // Check if we got fewer tasks than the page size
+        if (batch.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+        
+        // Add a small delay to be respectful to the API
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+      } catch (error) {
+        console.error(`❌ Error fetching team page ${page}:`, error.message);
+        
+        if (error.response?.status === 429) {
+          console.log("⏳ Rate limited, waiting 10 seconds...");
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          continue;
+        }
+        
+        break;
+      }
+    }
+
+    console.log(`✅ Total fetched from entire team: ${allTasks.length} tasks`);
+    return allTasks;
+
+  } catch (error) {
+    console.error("❌ Error fetching all ClickUp tasks:", error.message);
+    return [];
+  }
+}
+
 module.exports = { 
   fetchClickUpTasks, 
-  fetchAllClickUpTasks, 
+  fetchAllTasksNoFilter,
+  fetchAllClickUpTasksFromTeam,
   fetchTasksFromMultipleSources,
   testClickUpConnection 
 };
