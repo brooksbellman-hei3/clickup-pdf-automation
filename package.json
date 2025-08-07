@@ -15,7 +15,7 @@
     "deploy:render": "./deploy.sh render",
     "deploy:local": "./deploy.sh local",
     "validate": "node -e \"require('./sendEmail'); console.log('✅ All modules loaded successfully')\"",
-    "postinstall": "echo '✅ Dependencies installed successfully'"
+    "postinstall": "npm rebuild canvas && echo '✅ Dependencies installed successfully'"
   },
   "dependencies": {
     "axios": "^1.6.0",
