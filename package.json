@@ -4,6 +4,7 @@
   "description": "Automated PDF reporting from ClickUp with email delivery",
   "main": "scheduler.js",
   "scripts": {
+    "canvas-test": "node canvas_test.js"
     "start": "node scheduler.js",
     "test": "node scheduler.js --test",
     "dev": "nodemon scheduler.js",
