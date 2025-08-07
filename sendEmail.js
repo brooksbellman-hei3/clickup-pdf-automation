@@ -21,7 +21,38 @@ function findFieldNameByKeyword(fieldNames, keyword) {
 
   return matched;
 }
+// Add this test function to debug chart generation
+async function testChartGeneration() {
+  console.log("🧪 Testing chart generation with sample data...");
+  
+  const { generatePieChart } = require('./generateCharts');
+  
+  const testData = {
+    title: "Test Chart",
+    labels: ["Red", "Green", "Blue"],
+    data: [10, 20, 15],
+    colors: ["#FF0000", "#00FF00", "#0000FF"]
+  };
+  
+  const result = await generatePieChart(
+    testData.title, 
+    testData.labels, 
+    testData.data, 
+    testData.colors, 
+    99
+  );
+  
+  if (result) {
+    console.log("✅ Test chart generated successfully:", result);
+  } else {
+    console.log("❌ Test chart generation failed");
+  }
+  
+  return result;
+}
 
+// Call this before your main report generation
+// await testChartGeneration();
 async function sendReport() {
   console.log("📊 Starting report generation...");
 
