@@ -2,19 +2,28 @@ services:
   - type: web
     name: clickup-pdf-reporter-web
     runtime: node
-    buildCommand: ./build.sh && npm install
-    startCommand: node index.js
+    buildCommand: npm install
+    startCommand: node server.js
     plan: starter
+    region: oregon
+    env: node
+    buildFilter:
+      paths:
+      - package.json
+      - package-lock.json
+      - "*.js"
+      ignoredPaths:
+      - README.md
+      - "*.md"
     envVars:
       - key: NODE_ENV
         value: production
-      - key: TIMEZONE
-        value: America/New_York
-      - key: SEND_HOUR
-        value: 9
+      - key: PORT
+        value: 10000
+      # Sensitive environment variables (set these in Render dashboard)
       - key: CLICKUP_API_TOKEN
         sync: false
-      - key: CLICKUP_LIST_ID
+      - key: CLICKUP_LIST_ID  
         sync: false
       - key: SMTP_HOST
         sync: false
@@ -26,20 +35,31 @@ services:
         sync: false
       - key: EMAIL_TO
         sync: false
+      - key: TIMEZONE
+        value: America/New_York
+      - key: SEND_HOUR
+        value: "9"
 
   - type: worker
-    name: clickup-pdf-reporter-worker
+    name: clickup-pdf-reporter-scheduler
     runtime: node
-    buildCommand: ./build.sh && npm install
+    buildCommand: npm install
     startCommand: node scheduler.js
     plan: starter
+    region: oregon
+    env: node
+    buildFilter:
+      paths:
+      - package.json
+      - package-lock.json
+      - "*.js"
+      ignoredPaths:
+      - README.md
+      - "*.md"
     envVars:
       - key: NODE_ENV
         value: production
-      - key: TIMEZONE
-        value: America/New_York
-      - key: SEND_HOUR
-        value: 9
+      # Sensitive environment variables (set these in Render dashboard)
       - key: CLICKUP_API_TOKEN
         sync: false
       - key: CLICKUP_LIST_ID
@@ -54,3 +74,7 @@ services:
         sync: false
       - key: EMAIL_TO
         sync: false
+      - key: TIMEZONE
+        value: America/New_York
+      - key: SEND_HOUR
+        value: "9"
