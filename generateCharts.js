@@ -1,6 +1,15 @@
 const path = require("path");
 const sharp = require("sharp");
-const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
+
+// Try to load ChartJSNodeCanvas, fall back to Sharp-only if it fails
+let ChartJSNodeCanvas;
+try {
+  ChartJSNodeCanvas = require("chartjs-node-canvas").ChartJSNodeCanvas;
+  console.log("✅ ChartJSNodeCanvas loaded successfully");
+} catch (error) {
+  console.warn("⚠️ ChartJSNodeCanvas failed to load, using Sharp fallback:", error.message);
+  ChartJSNodeCanvas = null;
+}
 
 async function generatePieChart(title, labels, data, colors, index = 0) {
   const width = 800;
@@ -10,154 +19,213 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   console.log(`   Labels: ${labels.join(', ')}`);
   console.log(`   Data: ${data.join(', ')}`);
 
-  try {
-    const chartJSNodeCanvas = new ChartJSNodeCanvas({
-      width,
-      height,
-      backgroundColour: "white",
-      devicePixelRatio: 1, // Reduce for better compatibility
-      chartCallback: (ChartJS) => {
-        ChartJS.defaults.font.family = 'Arial, sans-serif';
-        ChartJS.defaults.font.size = 14;
-      }
-    });
-
-    const configuration = {
-      type: "pie",
-      data: {
-        labels,
-        datasets: [
-          {
-            data,
-            backgroundColor: colors,
-            borderColor: "#ffffff",
-            borderWidth: 2,
-          },
-        ],
-      },
-      options: {
-        responsive: false,
-        animation: false,
-        plugins: {
-          title: {
-            display: true,
-            text: title,
-            font: { size: 20, weight: 'bold' },
-            color: '#000000',
-            padding: 20
-          },
-          legend: {
-            display: true,
-            position: "right",
-            labels: {
-              font: { size: 14 },
-              color: "#000000",
-              usePointStyle: true,
-              padding: 15
-            },
-          },
-        },
-        layout: {
-          padding: {
-            top: 20,
-            bottom: 20,
-            left: 20,
-            right: 20
-          }
-        }
-      },
-    };
-
-    console.log(`   Rendering chart buffer...`);
-    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, "image/png");
-    
-    if (!buffer || buffer.length === 0) {
-      throw new Error("Chart buffer is empty");
+  // Try ChartJS first, fall back to Sharp if it fails
+  if (ChartJSNodeCanvas) {
+    try {
+      return await generateChartJSChart(title, labels, data, colors, index, width, height);
+    } catch (error) {
+      console.warn(`⚠️ ChartJS failed for "${title}", falling back to Sharp:`, error.message);
     }
-    
-    console.log(`   Buffer size: ${buffer.length} bytes`);
-
-    // Create filename with timestamp to avoid conflicts
-    const timestamp = Date.now();
-    const filename = `chart_${index}_${timestamp}.png`;
-    const filePath = path.join(__dirname, filename);
-
-    console.log(`   Processing image with Sharp...`);
-    
-    // Process with Sharp to ensure proper PNG format
-    await sharp(buffer)
-      .flatten({ background: "#ffffff" })
-      .png({
-        quality: 90,
-        compressionLevel: 6,
-        force: true
-      })
-      .toFile(filePath);
-
-    console.log(`✅ Chart saved successfully: ${filePath}`);
-    
-    return {
-      filePath,
-      base64Chart: buffer.toString("base64"),
-      filename: filename
-    };
-
-  } catch (error) {
-    console.error(`❌ Error generating chart "${title}":`, error);
-    
-    // Generate a simple fallback chart using Sharp directly
-    console.log(`🔄 Attempting fallback chart generation...`);
-    return await generateFallbackChart(title, labels, data, colors, index);
   }
+  
+  // Fallback to Sharp-based chart
+  return await generateSharpChart(title, labels, data, colors, index, width, height);
 }
 
-async function generateFallbackChart(title, labels, data, colors, index) {
-  try {
-    const width = 800;
-    const height = 600;
+async function generateChartJSChart(title, labels, data, colors, index, width, height) {
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({
+    width,
+    height,
+    backgroundColour: "white",
+    devicePixelRatio: 1,
+    chartCallback: (ChartJS) => {
+      // Configure defaults for better compatibility
+      ChartJS.defaults.font = ChartJS.defaults.font || {};
+      ChartJS.defaults.font.family = 'Arial, sans-serif';
+      ChartJS.defaults.font.size = 14;
+    }
+  });
+
+  const configuration = {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          data,
+          backgroundColor: colors,
+          borderColor: "#ffffff",
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      plugins: {
+        title: {
+          display: true,
+          text: title,
+          font: { size: 20, weight: 'bold' },
+          color: '#000000',
+          padding: 20
+        },
+        legend: {
+          display: true,
+          position: "right",
+          labels: {
+            font: { size: 14 },
+            color: "#000000",
+            usePointStyle: true,
+            padding: 15
+          },
+        },
+      },
+      layout: {
+        padding: {
+          top: 20,
+          bottom: 20,
+          left: 20,
+          right: 20
+        }
+      }
+    },
+  };
+
+  console.log(`   Rendering ChartJS buffer...`);
+  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, "image/png");
+  
+  if (!buffer || buffer.length === 0) {
+    throw new Error("ChartJS buffer is empty");
+  }
+  
+  console.log(`   ChartJS buffer size: ${buffer.length} bytes`);
+  return await processChartBuffer(buffer, title, index);
+}
+
+async function generateSharpChart(title, labels, data, colors, index, width, height) {
+  console.log(`   Generating Sharp fallback chart...`);
+  
+  // Calculate total for percentages
+  const total = data.reduce((sum, val) => sum + val, 0);
+  
+  // Create a detailed SVG chart
+  const labelHeight = 25;
+  const chartCenterX = width * 0.4;
+  const chartCenterY = height * 0.5;
+  const radius = Math.min(width * 0.25, height * 0.25);
+  
+  // Generate pie slices
+  let currentAngle = -Math.PI / 2; // Start at top
+  const slices = data.map((value, i) => {
+    const percentage = (value / total) * 100;
+    const sliceAngle = (value / total) * 2 * Math.PI;
     
-    // Create a simple image with text as fallback
-    const svg = `
-      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="white"/>
-        <text x="50%" y="50" text-anchor="middle" font-family="Arial" font-size="24" font-weight="bold">${title}</text>
-        ${labels.map((label, i) => `
-          <rect x="50" y="${100 + i * 40}" width="20" height="20" fill="${colors[i] || '#666'}"/>
-          <text x="80" y="${115 + i * 40}" font-family="Arial" font-size="16">${label}: ${data[i]}</text>
-        `).join('')}
-      </svg>
-    `;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + sliceAngle;
     
-    const timestamp = Date.now();
-    const filename = `chart_fallback_${index}_${timestamp}.png`;
-    const filePath = path.join(__dirname, filename);
+    // Calculate arc path
+    const startX = chartCenterX + Math.cos(startAngle) * radius;
+    const startY = chartCenterY + Math.sin(startAngle) * radius;
+    const endX = chartCenterX + Math.cos(endAngle) * radius;
+    const endY = chartCenterY + Math.sin(endAngle) * radius;
     
-    const buffer = await sharp(Buffer.from(svg))
-      .png()
-      .toBuffer();
-      
-    await sharp(buffer)
-      .png()
-      .toFile(filePath);
+    const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
     
-    console.log(`✅ Fallback chart generated: ${filePath}`);
+    const pathData = [
+      `M ${chartCenterX} ${chartCenterY}`,
+      `L ${startX} ${startY}`,
+      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+      `Z`
+    ].join(' ');
+    
+    currentAngle = endAngle;
     
     return {
-      filePath,
-      base64Chart: buffer.toString("base64"),
-      filename: filename
+      path: pathData,
+      color: colors[i] || '#666',
+      label: labels[i],
+      value: value,
+      percentage: percentage.toFixed(1)
     };
+  });
+  
+  // Create legend
+  const legendX = width * 0.65;
+  const legendStartY = height * 0.3;
+  
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>
+          .title { font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; fill: #000; }
+          .legend-text { font-family: Arial, sans-serif; font-size: 16px; fill: #000; }
+          .legend-value { font-family: Arial, sans-serif; font-size: 14px; fill: #666; }
+        </style>
+      </defs>
+      
+      <!-- White background -->
+      <rect width="100%" height="100%" fill="white"/>
+      
+      <!-- Title -->
+      <text x="${width / 2}" y="40" text-anchor="middle" class="title">${title}</text>
+      
+      <!-- Pie slices -->
+      ${slices.map(slice => `
+        <path d="${slice.path}" fill="${slice.color}" stroke="white" stroke-width="2"/>
+      `).join('')}
+      
+      <!-- Legend -->
+      ${slices.map((slice, i) => `
+        <rect x="${legendX}" y="${legendStartY + i * labelHeight}" width="15" height="15" fill="${slice.color}"/>
+        <text x="${legendX + 25}" y="${legendStartY + i * labelHeight + 12}" class="legend-text">${slice.label}</text>
+        <text x="${legendX + 25}" y="${legendStartY + i * labelHeight + 12 + 16}" class="legend-value">${slice.value} (${slice.percentage}%)</text>
+      `).join('')}
+    </svg>
+  `;
+  
+  console.log(`   Generating Sharp PNG from SVG...`);
+  const buffer = await sharp(Buffer.from(svg))
+    .png({
+      quality: 90,
+      compressionLevel: 6
+    })
+    .toBuffer();
     
-  } catch (fallbackError) {
-    console.error(`❌ Fallback chart generation also failed:`, fallbackError);
-    throw fallbackError;
-  }
+  console.log(`   Sharp buffer size: ${buffer.length} bytes`);
+  return await processChartBuffer(buffer, title, index);
+}
+
+async function processChartBuffer(buffer, title, index) {
+  const timestamp = Date.now();
+  const filename = `chart_${index}_${timestamp}.png`;
+  const filePath = path.join(__dirname, filename);
+
+  console.log(`   Processing final image...`);
+  
+  // Ensure proper PNG format and white background
+  await sharp(buffer)
+    .flatten({ background: "#ffffff" })
+    .png({
+      quality: 90,
+      compressionLevel: 6,
+      force: true
+    })
+    .toFile(filePath);
+
+  console.log(`✅ Chart saved successfully: ${filePath}`);
+  
+  return {
+    filePath,
+    base64Chart: buffer.toString("base64"),
+    filename: filename
+  };
 }
 
 async function generateTestChart() {
   console.log("🧪 Generating test chart...");
   const testData = {
-    title: "Connection Test Chart",
+    title: "Render Test Chart",
     labels: ["Working", "Test", "Data"],
     data: [40, 30, 30],
     colors: ["#28a745", "#17a2b8", "#ffc107"]
@@ -186,7 +254,7 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
     'Black': '#343a40', 'black': '#343a40', 'BLACK': '#343a40',
     'Black: Non-Delivery': '#6c757d',
     'Gray': '#6c757d', 'gray': '#6c757d', 'GRAY': '#6c757d',
-    'Grey': '#6c757d', 'grey': '#6c757d', 'GREY': '#6c757d',
+    'Grey': '#6c757d', 'grey': '#6c757d, 'GREY': '#6c757d',
     'Blue': '#007bff', 'blue': '#007bff', 'BLUE': '#007bff',
     'Yellow': '#ffc107', 'yellow': '#ffc107', 'YELLOW': '#ffc107',
     'Purple': '#6f42c1', 'purple': '#6f42c1', 'PURPLE': '#6f42c1',
