@@ -76,53 +76,58 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
         borderWidth: 2
       }]
     },
-    options: {
-      responsive: false,
-      maintainAspectRatio: false,
-      animation: false,
-      layout: {
-        padding: 40
-      },
-      plugins: {
-        title: {
-          display: true,
-          text: title,
-          font: { 
-            size: 20,
-            weight: 'bold'
-          },
-          color: '#000000',
-          padding: 20
-        },
-        legend: {
-          display: true,
-          position: "right",
-          labels: {
-            font: { size: 12 },
-            color: '#000000',
-            padding: 10,
-            generateLabels: function(chart) {
-              const data = chart.data;
-              if (data.labels.length && data.datasets.length) {
-                return data.labels.map((label, i) => {
-                  return {
-                    text: `${label}: ${data.datasets[0].data[i]}`,
-                    fillStyle: data.datasets[0].backgroundColor[i],
-                    strokeStyle: '#ffffff',
-                    lineWidth: 2,
-                    pointStyle: 'rect',
-                    hidden: false,
-                    index: i
-                  };
-                });
-              }
-              return [];
-            }
+options: {
+  responsive: false,
+  maintainAspectRatio: false,
+  animation: false,
+  layout: {
+    padding: 40
+  },
+  plugins: {
+    title: {
+      display: true,
+      text: title,
+      font: { size: 20, weight: 'bold' },
+      color: '#000000',
+      padding: 20
+    },
+    legend: {
+      display: true,
+      position: "right",
+      labels: {
+        font: { size: 12 },
+        color: '#000000',
+        padding: 10,
+        generateLabels: function(chart) {
+          const data = chart.data;
+          if (data.labels.length && data.datasets.length) {
+            return data.labels.map((label, i) => {
+              return {
+                text: `${label}: ${data.datasets[0].data[i]}`,
+                fillStyle: data.datasets[0].backgroundColor[i],
+                strokeStyle: '#ffffff',
+                lineWidth: 2,
+                pointStyle: 'rect',
+                hidden: false,
+                index: i
+              };
+            });
           }
+          return [];
         }
       }
+    },
+    // 🔧 This plugin will forcibly draw a white background
+    beforeDraw: (chart) => {
+      const { ctx } = chart;
+      ctx.save();
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, chart.width, chart.height);
+      ctx.restore();
     }
-  };
+  }
+}
+
 
   try {
     console.log(`🎨 Rendering chart with colors:`, hexColors);
