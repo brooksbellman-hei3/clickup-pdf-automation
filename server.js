@@ -20,6 +20,30 @@ app.get('/generate-image', (req, res) => {
   res.send(buffer);
 });
 
+// Serve static files (including charts)
+app.use('/charts', express.static(__dirname));
+
+// New route: list all chart PNG files with clickable links
+app.get('/charts-list', (req, res) => {
+  fs.readdir(__dirname, (err, files) => {
+    if (err) {
+      return res.status(500).send('Error reading files');
+    }
+
+    // Filter only chart PNG files
+    const chartFiles = files.filter(f => f.startsWith('chart_') && f.endsWith('.png'));
+
+    const links = chartFiles.map(f => `<li><a href="/charts/${f}" target="_blank">${f}</a></li>`).join('\n');
+
+    res.send(`
+      <h1>Saved Chart Files</h1>
+      <ul>
+        ${links}
+      </ul>
+    `);
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`✅ Canvas test server running on port ${PORT}`);
 });
