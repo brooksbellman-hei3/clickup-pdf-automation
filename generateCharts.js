@@ -9,18 +9,22 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
     height,
-    backgroundColour: 'white',
+    backgroundColour: "white",
     devicePixelRatio: 2,
   });
 
   const configuration = {
-    type: 'pie',
+    type: "pie",
     data: {
       labels,
-      datasets: [{
-        data,
-        backgroundColor: colors
-      }]
+      datasets: [
+        {
+          data,
+          backgroundColor: colors,
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+      ],
     },
     options: {
       responsive: false,
@@ -29,47 +33,28 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
         title: {
           display: true,
           text: title,
-          font: { size: 24 }
+          font: { size: 24 },
         },
         legend: {
-          position: 'right',
+          display: true,
+          position: "right",
           labels: {
-            font: { size: 16 }
-          }
-        }
-      }
+            font: { size: 16 },
+            color: "#000",
+          },
+        },
+      },
     },
-    // Remove plugin 'whiteBackground' because backgroundColour covers it
-    // plugins: [{
-    //   id: 'whiteBackground',
-    //   beforeDraw: (chart) => {
-    //     const ctx = chart.ctx;
-    //     ctx.save();
-    //     ctx.globalCompositeOperation = 'destination-over';
-    //     ctx.fillStyle = 'white';
-    //     ctx.fillRect(0, 0, chart.width, chart.height);
-    //     ctx.restore();
-    //   }
-    // }]
   };
 
-  try {
-    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+  const base64Chart = buffer.toString("base64");
+  const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
+  await sharp(buffer).flatten({ background: "#ffffff" }).toFile(filePath);
 
-    const base64Chart = buffer.toString('base64');
+  console.log(`✅ Chart saved: ${filePath}`);
 
-    const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
-    await sharp(buffer)
-      .flatten({ background: '#ffffff' })
-      .toFile(filePath);
-
-    console.log(`✅ Chart saved: ${filePath}`);
-
-    return { filePath, base64Chart };
-  } catch (error) {
-    console.error("❌ Error generating chart:", error);
-    throw error;
-  }
+  return { filePath, base64Chart };
 }
 
 async function generateTestChart() {
