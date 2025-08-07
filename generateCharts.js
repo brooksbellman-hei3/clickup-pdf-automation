@@ -254,7 +254,7 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
     'Black': '#343a40', 'black': '#343a40', 'BLACK': '#343a40',
     'Black: Non-Delivery': '#6c757d',
     'Gray': '#6c757d', 'gray': '#6c757d', 'GRAY': '#6c757d',
-    'Grey': '#6c757d', 'grey': '#6c757d, 'GREY': '#6c757d',
+    'Grey': '#6c757d', 'grey': '#6c757d', 'GREY': '#6c757d',
     'Blue': '#007bff', 'blue': '#007bff', 'BLUE': '#007bff',
     'Yellow': '#ffc107', 'yellow': '#ffc107', 'YELLOW': '#ffc107',
     'Purple': '#6f42c1', 'purple': '#6f42c1', 'PURPLE': '#6f42c1',
