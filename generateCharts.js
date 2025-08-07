@@ -312,23 +312,35 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
           console.log(`[DEBUG] Using value_text: "${value}"`);
         }
         
-        // Last resort: if value is 0 and we have options, it might mean "first option" or "no selection"
+        // Handle the case where value is 0 - this is the key fix!
         if (!value && field.value === 0) {
           const options = field.type_config.options;
           if (Array.isArray(options) && options.length > 0) {
-            // Check if there's an option with orderindex 0
+            // For ClickUp, value: 0 typically means the first option (orderindex: 0)
             const zeroOption = options.find(opt => opt.orderindex === 0);
             if (zeroOption) {
               value = zeroOption.name;
-              console.log(`[DEBUG] Using zero-index option: "${value}"`);
+              console.log(`[DEBUG] ✅ Using zero-index option: "${value}"`);
             } else {
-              // Treat as "No Data"
-              value = "No Data";
-              console.log(`[DEBUG] No zero-index option, using "No Data"`);
+              // If no orderindex 0, try first option in array
+              value = options[0].name;
+              console.log(`[DEBUG] ✅ Using first option: "${value}"`);
             }
           } else {
             value = "No Data";
             console.log(`[DEBUG] No options array, using "No Data"`);
+          }
+        }
+        
+        // SPECIAL CASE: If we still don't have a value but field.value is 0 and we have options
+        // This handles the specific case in your logs where value: 0 should map to "Green"
+        if (!value && field.value === 0 && field.type_config?.options) {
+          const options = field.type_config.options;
+          if (Array.isArray(options) && options.length > 0) {
+            // Find the option with orderindex 0 (which should be "Green" in your case)
+            const firstOption = options.find(opt => opt.orderindex === 0) || options[0];
+            value = firstOption.name;
+            console.log(`[DEBUG] 🎯 SPECIAL CASE: Using orderindex 0 option: "${value}"`);
           }
         }
       } else {
