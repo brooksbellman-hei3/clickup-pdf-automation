@@ -1,40 +1,31 @@
 const express = require('express');
 const { createCanvas } = require('canvas');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const filePath = path.join(__dirname, 'test.png');
-
-async function generateImage() {
+// Route to generate and return an image
+app.get('/generate-image', (req, res) => {
   const canvas = createCanvas(400, 400);
   const ctx = canvas.getContext('2d');
+
   ctx.fillStyle = 'red';
   ctx.fillRect(0, 0, 400, 400);
 
   const buffer = canvas.toBuffer('image/png');
+
+  // Optional: save it to disk (useful for debugging)
+  const filePath = path.join(__dirname, 'test.png');
   fs.writeFileSync(filePath, buffer);
 
-  console.log('✅ test.png generated');
-}
-
-app.get('/test-image', (req, res) => {
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-  } else {
-    res.status(404).send('Image not found, generate it first.');
-  }
+  // Send the image directly to browser
+  res.set('Content-Type', 'image/png');
+  res.send(buffer);
 });
 
-app.get('/generate-image', async (req, res) => {
-  await generateImage();
-  res.send('Image generated! You can now access /test-image');
-});
-
+// Start the server
 app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
-  // Optionally generate image on start:
-  generateImage();
+  console.log(`🚀 Server running on port ${PORT}`);
 });
