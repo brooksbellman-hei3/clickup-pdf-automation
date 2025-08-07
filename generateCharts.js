@@ -1,11 +1,12 @@
 const path = require("path");
 const sharp = require("sharp");
+const { ChartJSNodeCanvas } = require("chartjs-node-canvas");
 
 async function generatePieChart(title, labels, data, colors, index = 0) {
   const width = 800;
   const height = 600;
 
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height, backgroundColour: 'white' });
 
   const configuration = {
     type: 'pie',
@@ -44,25 +45,20 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     }]
   };
 
-  // Render to buffer
   const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
 
-  // Convert PNG buffer to Base64
   const base64Chart = buffer.toString('base64');
 
-  // Optional: Save to file
   const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
   await sharp(buffer)
-    .flatten({ background: '#ffffff' }) // force white background
+    .flatten({ background: '#ffffff' })
     .toFile(filePath);
 
   console.log(`✅ Chart saved: ${filePath}`);
 
-  // Return both
   return { filePath, base64Chart };
 }
 
-// Test function to generate a simple chart without data processing
 async function generateTestChart() {
   console.log("🧪 Generating test chart...");
   const testData = {
@@ -74,7 +70,6 @@ async function generateTestChart() {
   return await generatePieChart(testData.title, testData.labels, testData.data, testData.colors, 999);
 }
 
-// Custom pie chart from a field with known fixed labels/colors
 async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index) {
   console.log(`\n🎨 Generating chart for field: "${fieldName}"`);
 
@@ -150,7 +145,6 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
   return await generatePieChart(title, labels, data, colors, index);
 }
 
-// Analyze custom field structure (debug helper)
 function analyzeFieldStructure(tasks, fieldName) {
   console.log(`\n🔍 ANALYZING FIELD STRUCTURE for "${fieldName}"`);
   if (!tasks || tasks.length === 0) {
