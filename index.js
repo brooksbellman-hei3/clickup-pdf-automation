@@ -7,7 +7,6 @@ const net = require('net');
 const PORT = process.env.PORT || 10000;
 
 const server = net.createServer();
-
 server.once('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use!`);
