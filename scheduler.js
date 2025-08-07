@@ -38,6 +38,7 @@ async function testRun() {
     console.log("✅ Test report completed successfully!");
   } catch (error) {
     console.error("❌ Test report failed:", error.message);
+    console.error(error.stack);
   }
 }
 
@@ -45,7 +46,6 @@ async function testRun() {
 function startScheduler() {
   validateEnvironment();
   
-  // Production schedule: Daily at specified hour
   const sendHour = parseInt(process.env.SEND_HOUR) || 9;
   const cronExpression = `0 ${sendHour} * * *`; // Daily at specified hour
   
@@ -63,20 +63,19 @@ function startScheduler() {
   }, {
     timezone: process.env.TIMEZONE || "America/New_York"
   });
-  
-  // Optional: Test schedule (every 2 minutes) - uncomment for testing
-  console.log("🧪 Test mode: Reports every 2 minutes");
-  cron.schedule("*/2 * * * *", async () => {
-     console.log("📤 Running test ClickUp report job...");
-     try {
-       await sendReport();
-       console.log("✅ Test report sent!");
-     } catch (error) {
-       console.error("❌ Test report failed:", error.message);
-     }
-   }, {
-     timezone: process.env.TIMEZONE || "America/New_York"
-   });
+
+  // 🚨 TESTING: Run once immediately on startup, then disable
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("🧪 Development mode: Running one test report immediately...");
+    setTimeout(async () => {
+      try {
+        await sendReport();
+        console.log("✅ Startup test report completed!");
+      } catch (error) {
+        console.error("❌ Startup test report failed:", error.message);
+      }
+    }, 5000); // Wait 5 seconds for service to be ready
+  }
 }
 
 // Handle graceful shutdown
@@ -97,6 +96,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
+  console.error(error.stack);
   process.exit(1);
 });
 
@@ -110,25 +110,12 @@ if (require.main === module) {
     
     // Keep the process alive
     console.log("🟢 Scheduler is running... Press Ctrl+C to stop");
+    
+    // Heartbeat log every hour (less frequent)
     setInterval(() => {
-      // Heartbeat log every hour
       console.log(`💓 Scheduler heartbeat: ${new Date().toLocaleString()}`);
     }, 60 * 60 * 1000);
   }
 }
 
 module.exports = { startScheduler, testRun };
-
-
-// ✅ Add this AFTER module.exports
-const PORT = process.env.PORT || 10000;
-
-const express = require('express');
-const app = express();
-
-app.get('/', (req, res) => res.send('✅ Scheduler is running!'));
-
-app.listen(PORT, () => {
-  console.log(`🌐 Web service is listening on port ${PORT}`);
-});
-
