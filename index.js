@@ -4,7 +4,7 @@ require('./scheduler');
 
 const app = require('./server');
 const net = require('net');
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT;
 
 const server = net.createServer();
 server.once('error', (err) => {
