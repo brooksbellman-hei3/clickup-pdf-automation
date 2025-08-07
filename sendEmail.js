@@ -174,9 +174,11 @@ async function emailReport(attachments, taskCount) {
       <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
     `,
     attachments: attachments.map((path, index) => ({
-      filename: `chart_${index + 1}.jpg`,
-      path: path,
-      contentType: 'image/jpeg'
+    filename: `chart_${index + 1}.png`,
+    path: path,
+    contentType: 'image/png'
+}))
+
     }))
   });
 
