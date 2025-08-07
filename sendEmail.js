@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 
 const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
-const { generatePieChart, generateFixedColorCustomFieldChart, analyzeFieldStructure, generateTestChart } = require('./generateCharts');
+const { generatePieChart, generateFixedColorCustomFieldChart, analyzeFieldStructure, generateTestChart, diagnoseDropdownOptions } = require('./generateCharts');
 
 function findFieldNameByKeyword(fieldNames, keyword) {
   const normalize = str =>
@@ -79,8 +79,15 @@ async function generateAllCharts(tasks) {
   console.log("🔍 Matched field name for viewer status:", viewerFieldName);
   console.log("🔍 Matched field name for tablet status:", tabletFieldName);
 
-  if (viewerFieldName) analyzeFieldStructure(tasks, viewerFieldName);
-  if (tabletFieldName) analyzeFieldStructure(tasks, tabletFieldName);
+  // Enhanced analysis with dropdown diagnosis
+  if (viewerFieldName) {
+    analyzeFieldStructure(tasks, viewerFieldName);
+    await diagnoseDropdownOptions(tasks, viewerFieldName);
+  }
+  if (tabletFieldName) {
+    analyzeFieldStructure(tasks, tabletFieldName);
+    await diagnoseDropdownOptions(tasks, tabletFieldName);
+  }
 
   if (viewerFieldName) {
     console.log(`\n🎨 Generating viewer status chart...`);
@@ -115,7 +122,7 @@ async function generateAllCharts(tasks) {
 async function emailReport(charts, taskCount) {
   console.log("📧 Sending email...");
 
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT, 10),
     secure: process.env.SMTP_PORT === "465",
