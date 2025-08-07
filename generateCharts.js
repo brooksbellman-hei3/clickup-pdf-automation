@@ -9,7 +9,7 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
     height,
-    backgroundColour: "white",
+    backgroundColour: "white", // Force white canvas background
     devicePixelRatio: 2,
   });
 
@@ -21,7 +21,7 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
         {
           data,
           backgroundColor: colors,
-          borderColor: "#fff",
+          borderColor: "#ffffff",
           borderWidth: 2,
         },
       ],
@@ -40,21 +40,26 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
           position: "right",
           labels: {
             font: { size: 16 },
-            color: "#000",
+            color: "#000000",
           },
         },
       },
     },
   };
 
-  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
-  const base64Chart = buffer.toString("base64");
+  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, "image/png");
   const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
-  await sharp(buffer).flatten({ background: "#ffffff" }).toFile(filePath);
+
+  await sharp(buffer)
+    .flatten({ background: "#ffffff" }) // Ensure white background if alpha exists
+    .png()
+    .toFile(filePath);
 
   console.log(`✅ Chart saved: ${filePath}`);
-
-  return { filePath, base64Chart };
+  return {
+    filePath,
+    base64Chart: buffer.toString("base64"),
+  };
 }
 
 async function generateTestChart() {
@@ -95,27 +100,26 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
 
   for (const task of tasks) {
     if (!task.custom_fields) continue;
-
     const field = task.custom_fields.find(f => f.name && f.name.trim() === fieldName.trim());
     if (!field) continue;
 
     let value = null;
 
-    if (field.type === 'drop_down' && field.type_config && field.type_config.options) {
-      if (Array.isArray(field.type_config.options)) {
-        const option = field.type_config.options[field.value];
-        value = option ? option.name : null;
-      } else if (typeof field.type_config.options === 'object') {
-        const option = field.type_config.options[field.value];
-        value = option ? option.name : null;
+    if (field.type === 'drop_down' && field.type_config?.options) {
+      const options = field.type_config.options;
+      if (Array.isArray(options)) {
+        const option = options.find(opt => opt.id === field.value);
+        value = option?.name || null;
+      } else if (typeof options === 'object') {
+        value = options[field.value]?.name || null;
       }
-    } else if (field.value_text && field.value_text.trim()) {
+    } else if (field.value_text?.trim()) {
       value = field.value_text.trim();
     } else if (typeof field.value === 'string' && field.value.trim()) {
       value = field.value.trim();
-    } else if (typeof field.value === 'object' && field.value && field.value.name) {
+    } else if (typeof field.value === 'object' && field.value?.name) {
       value = field.value.name;
-    } else if (field.value !== null && field.value !== undefined && field.value !== '') {
+    } else if (field.value != null && field.value !== '') {
       value = String(field.value).trim();
     }
 
@@ -152,7 +156,7 @@ function analyzeFieldStructure(tasks, fieldName) {
 
   for (let i = 0; i < Math.min(5, tasks.length); i++) {
     const task = tasks[i];
-    console.log(`\n📋 Task ${i + 1}: "${task.name.substring(0, 30)}..."`);
+    console.log(`\n📋 Task ${i + 1}: "${task.name?.substring(0, 30)}..."`);
 
     if (!task.custom_fields) {
       console.log(`   ❌ No custom_fields array`);
