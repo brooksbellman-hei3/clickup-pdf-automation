@@ -2,6 +2,11 @@ const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
 const fs = require("fs");
 const path = require("path");
 const sharp = require('sharp');
+const { registerFont } = require('canvas');
+
+registerFont('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', {
+  family: 'DejaVu Sans'
+});
 
 async function generatePieChart(title, labels, data, colors, index = 0) {
   console.log(`\n🎨 Generating pie chart: "${title}"`);
