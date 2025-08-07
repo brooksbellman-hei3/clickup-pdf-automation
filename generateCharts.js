@@ -6,71 +6,169 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   const width = 800;
   const height = 600;
 
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width,
-    height,
-    backgroundColour: "white", // Force white canvas background
-    devicePixelRatio: 2,
-  });
+  console.log(`🎨 Creating chart: ${title}`);
+  console.log(`   Labels: ${labels.join(', ')}`);
+  console.log(`   Data: ${data.join(', ')}`);
 
-  const configuration = {
-    type: "pie",
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: colors,
-          borderColor: "#ffffff",
-          borderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: false,
-      animation: false,
-      plugins: {
-        title: {
-          display: true,
-          text: title,
-          font: { size: 24 },
-        },
-        legend: {
-          display: true,
-          position: "right",
-          labels: {
-            font: { size: 16 },
-            color: "#000000",
+  try {
+    const chartJSNodeCanvas = new ChartJSNodeCanvas({
+      width,
+      height,
+      backgroundColour: "white",
+      devicePixelRatio: 1, // Reduce for better compatibility
+      chartCallback: (ChartJS) => {
+        ChartJS.defaults.font.family = 'Arial, sans-serif';
+        ChartJS.defaults.font.size = 14;
+      }
+    });
+
+    const configuration = {
+      type: "pie",
+      data: {
+        labels,
+        datasets: [
+          {
+            data,
+            backgroundColor: colors,
+            borderColor: "#ffffff",
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: false,
+        animation: false,
+        plugins: {
+          title: {
+            display: true,
+            text: title,
+            font: { size: 20, weight: 'bold' },
+            color: '#000000',
+            padding: 20
+          },
+          legend: {
+            display: true,
+            position: "right",
+            labels: {
+              font: { size: 14 },
+              color: "#000000",
+              usePointStyle: true,
+              padding: 15
+            },
           },
         },
+        layout: {
+          padding: {
+            top: 20,
+            bottom: 20,
+            left: 20,
+            right: 20
+          }
+        }
       },
-    },
-  };
+    };
 
-  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, "image/png");
-  const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
+    console.log(`   Rendering chart buffer...`);
+    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, "image/png");
+    
+    if (!buffer || buffer.length === 0) {
+      throw new Error("Chart buffer is empty");
+    }
+    
+    console.log(`   Buffer size: ${buffer.length} bytes`);
 
-  await sharp(buffer)
-    .flatten({ background: "#ffffff" }) // Ensure white background if alpha exists
-    .png()
-    .toFile(filePath);
+    // Create filename with timestamp to avoid conflicts
+    const timestamp = Date.now();
+    const filename = `chart_${index}_${timestamp}.png`;
+    const filePath = path.join(__dirname, filename);
 
-  console.log(`✅ Chart saved: ${filePath}`);
-  return {
-    filePath,
-    base64Chart: buffer.toString("base64"),
-  };
+    console.log(`   Processing image with Sharp...`);
+    
+    // Process with Sharp to ensure proper PNG format
+    await sharp(buffer)
+      .flatten({ background: "#ffffff" })
+      .png({
+        quality: 90,
+        compressionLevel: 6,
+        force: true
+      })
+      .toFile(filePath);
+
+    console.log(`✅ Chart saved successfully: ${filePath}`);
+    
+    return {
+      filePath,
+      base64Chart: buffer.toString("base64"),
+      filename: filename
+    };
+
+  } catch (error) {
+    console.error(`❌ Error generating chart "${title}":`, error);
+    
+    // Generate a simple fallback chart using Sharp directly
+    console.log(`🔄 Attempting fallback chart generation...`);
+    return await generateFallbackChart(title, labels, data, colors, index);
+  }
+}
+
+async function generateFallbackChart(title, labels, data, colors, index) {
+  try {
+    const width = 800;
+    const height = 600;
+    
+    // Create a simple image with text as fallback
+    const svg = `
+      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="white"/>
+        <text x="50%" y="50" text-anchor="middle" font-family="Arial" font-size="24" font-weight="bold">${title}</text>
+        ${labels.map((label, i) => `
+          <rect x="50" y="${100 + i * 40}" width="20" height="20" fill="${colors[i] || '#666'}"/>
+          <text x="80" y="${115 + i * 40}" font-family="Arial" font-size="16">${label}: ${data[i]}</text>
+        `).join('')}
+      </svg>
+    `;
+    
+    const timestamp = Date.now();
+    const filename = `chart_fallback_${index}_${timestamp}.png`;
+    const filePath = path.join(__dirname, filename);
+    
+    const buffer = await sharp(Buffer.from(svg))
+      .png()
+      .toBuffer();
+      
+    await sharp(buffer)
+      .png()
+      .toFile(filePath);
+    
+    console.log(`✅ Fallback chart generated: ${filePath}`);
+    
+    return {
+      filePath,
+      base64Chart: buffer.toString("base64"),
+      filename: filename
+    };
+    
+  } catch (fallbackError) {
+    console.error(`❌ Fallback chart generation also failed:`, fallbackError);
+    throw fallbackError;
+  }
 }
 
 async function generateTestChart() {
   console.log("🧪 Generating test chart...");
   const testData = {
-    title: "Simple Test Chart",
-    labels: ["Test A", "Test B", "Test C"],
-    data: [30, 20, 50],
-    colors: ["#FF6384", "#36A2EB", "#FFCE56"]
+    title: "Connection Test Chart",
+    labels: ["Working", "Test", "Data"],
+    data: [40, 30, 30],
+    colors: ["#28a745", "#17a2b8", "#ffc107"]
   };
-  return await generatePieChart(testData.title, testData.labels, testData.data, testData.colors, 999);
+  
+  try {
+    return await generatePieChart(testData.title, testData.labels, testData.data, testData.colors, 999);
+  } catch (error) {
+    console.error("❌ Test chart generation failed:", error);
+    throw error;
+  }
 }
 
 async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index) {
@@ -131,7 +229,7 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
   }
 
   if (processedTasks === 0) {
-    console.warn(`⚠️ No valid data found for "${fieldName}"`);
+    console.warn(`⚠️ No valid data found for "${fieldName}" - generating test chart`);
     return await generateTestChart();
   }
 
@@ -154,7 +252,7 @@ function analyzeFieldStructure(tasks, fieldName) {
     return;
   }
 
-  for (let i = 0; i < Math.min(5, tasks.length); i++) {
+  for (let i = 0; i < Math.min(3, tasks.length); i++) {
     const task = tasks[i];
     console.log(`\n📋 Task ${i + 1}: "${task.name?.substring(0, 30)}..."`);
 
