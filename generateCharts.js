@@ -21,12 +21,22 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   const height = 600;
 
   // Simplified ChartJS canvas configuration
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
-    width, 
-    height,
-    backgroundColour: 'white'
-  });
-
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({
+  width,
+  height,
+  chartCallback: (ChartJS) => {
+    ChartJS.register({
+      id: 'whiteBackground',
+      beforeDraw: (chart) => {
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+      }
+    });
+  }
+});
   // Ensure all colors are proper hex format
   const hexColors = colors.map(color => {
     if (!color) return '#999999';
@@ -131,7 +141,17 @@ const configuration = {
     }
   }]
 };
+// ⬇️ Render chart to buffer
+  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
 
+  // ⬇️ Use sharp to ensure background is white
+  const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
+  await sharp(buffer)
+    .flatten({ background: '#ffffff' }) // Ensures non-transparent background
+    .toFile(filePath);
+
+  return filePath;
+}
 
   try {
     console.log(`🎨 Rendering chart with colors:`, hexColors);
