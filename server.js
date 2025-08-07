@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Route to generate and serve a red 400x400 PNG image, also saves to disk as test.png
 app.get('/generate-image', (req, res) => {
@@ -24,7 +23,6 @@ app.get('/generate-image', (req, res) => {
 });
 
 // Serve static files from the current directory, accessible under /charts URL path
-// This means chart files like chart_0_*.png can be accessed at /charts/chart_0_*.png
 app.use('/charts', express.static(__dirname));
 
 // Route to list all PNG chart files starting with "chart_" and link to view them
@@ -50,7 +48,5 @@ app.get('/charts-list', (req, res) => {
   });
 });
 
-// Start the Express server
-app.listen(PORT, () => {
-  console.log(`✅ Canvas test server running on port ${PORT}`);
-});
+// EXPORT the app but DO NOT start the server here
+module.exports = app;
