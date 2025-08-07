@@ -160,9 +160,6 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     console.log(`🔍 PNG saved for debugging: ${pngPath}`);
 
     // Convert to JPEG
-    const filename = `chart_${index}_${Date.now()}.jpg`;
-    const outputPath = path.join(__dirname, filename);
-
     const outputPath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
     fs.writeFileSync(outputPath, pngBuffer);
     console.log(`✅ Chart saved as PNG: ${outputPath}`);
