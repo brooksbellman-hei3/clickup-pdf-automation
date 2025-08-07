@@ -142,8 +142,9 @@ async function emailReport(charts, taskCount) {
 
   const chartImagesHtml = charts.map((chart, i) => `
     <h3>Chart ${i + 1}</h3>
-    <img src="data:image/png;base64,${chart.base64Chart}" alt="Chart ${i + 1}" style="max-width: 600px;" />
+    <img src="cid:chart${i}@report" alt="Chart ${i + 1}" style="max-width: 600px;" />
   `).join("<br>");
+
 
   await transporter.sendMail({
     from: process.env.SMTP_USER,
@@ -157,8 +158,14 @@ async function emailReport(charts, taskCount) {
       ${chartImagesHtml}
       <br>
       <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
-    `
-  });
+    `,
+    attachments: charts.map((chart, i) => ({
+      filename: `chart${i + 1}.png`,
+      content: Buffer.from(chart.base64Chart, 'base64'),
+      cid: `chart${i}@report`
+  }))
+});
+
 
   console.log("✅ Email sent successfully");
 }
