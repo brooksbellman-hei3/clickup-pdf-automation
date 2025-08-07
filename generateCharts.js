@@ -258,11 +258,15 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
     'Blue': '#007bff', 'blue': '#007bff', 'BLUE': '#007bff',
     'Yellow': '#ffc107', 'yellow': '#ffc107', 'YELLOW': '#ffc107',
     'Purple': '#6f42c1', 'purple': '#6f42c1', 'PURPLE': '#6f42c1',
-    'Pink': '#e83e8c', 'pink': '#e83e8c', 'PINK': '#e83e8c'
+    'Pink': '#e83e8c', 'pink': '#e83e8c', 'PINK': '#e83e8c',
+    'N/A': '#6c757d', 'n/a': '#6c757d', 'NA': '#6c757d',
+    'No Data': '#6c757d', 'Empty': '#6c757d'
   };
 
   const counts = {};
   let processedTasks = 0;
+
+  console.log(`🔍 Processing ${tasks.length} tasks for field "${fieldName}"`);
 
   for (const task of tasks) {
     if (!task.custom_fields) continue;
@@ -271,32 +275,99 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
 
     let value = null;
 
-    if (field.type === 'drop_down' && field.type_config?.options) {
-      const options = field.type_config.options;
-      if (Array.isArray(options)) {
-        const option = options.find(opt => opt.id === field.value);
-        value = option?.name || null;
-      } else if (typeof options === 'object') {
-        value = options[field.value]?.name || null;
+    // Debug: Show what we're working with
+    console.log(`[DEBUG] Task: "${task.name?.substring(0, 30)}..."`);
+    console.log(`[DEBUG] Field type: ${field.type}`);
+    console.log(`[DEBUG] Field value: ${JSON.stringify(field.value)}`);
+    console.log(`[DEBUG] Field value_text: "${field.value_text}"`);
+
+    if (field.type === 'drop_down') {
+      // Handle ClickUp dropdown fields
+      if (field.type_config?.options) {
+        console.log(`[DEBUG] Has type_config options:`, Object.keys(field.type_config.options));
+        
+        // Try different ways to get the dropdown value
+        if (field.value !== null && field.value !== undefined && field.value !== 0) {
+          // Look up the option by ID
+          const options = field.type_config.options;
+          if (Array.isArray(options)) {
+            const option = options.find(opt => opt.id === field.value || opt.orderindex === field.value);
+            value = option?.name || null;
+            console.log(`[DEBUG] Found option from array: "${value}"`);
+          } else if (typeof options === 'object') {
+            // Options might be an object with keys as IDs
+            const optionKey = Object.keys(options).find(key => 
+              options[key].id === field.value || 
+              key === String(field.value) ||
+              options[key].orderindex === field.value
+            );
+            value = optionKey ? options[optionKey].name : null;
+            console.log(`[DEBUG] Found option from object: "${value}"`);
+          }
+        }
+        
+        // If we still don't have a value, check value_text
+        if (!value && field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
+          value = field.value_text.trim();
+          console.log(`[DEBUG] Using value_text: "${value}"`);
+        }
+        
+        // Last resort: if value is 0 and we have options, it might mean "first option" or "no selection"
+        if (!value && field.value === 0) {
+          const options = field.type_config.options;
+          if (Array.isArray(options) && options.length > 0) {
+            // Check if there's an option with orderindex 0
+            const zeroOption = options.find(opt => opt.orderindex === 0);
+            if (zeroOption) {
+              value = zeroOption.name;
+              console.log(`[DEBUG] Using zero-index option: "${value}"`);
+            } else {
+              // Treat as "No Data"
+              value = "No Data";
+              console.log(`[DEBUG] No zero-index option, using "No Data"`);
+            }
+          } else {
+            value = "No Data";
+            console.log(`[DEBUG] No options array, using "No Data"`);
+          }
+        }
+      } else {
+        console.log(`[DEBUG] No type_config options found`);
+        // Fallback to value_text or treat as empty
+        if (field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
+          value = field.value_text.trim();
+        } else {
+          value = "No Data";
+        }
       }
-    } else if (field.value_text?.trim()) {
-      value = field.value_text.trim();
-    } else if (typeof field.value === 'string' && field.value.trim()) {
-      value = field.value.trim();
-    } else if (typeof field.value === 'object' && field.value?.name) {
-      value = field.value.name;
-    } else if (field.value != null && field.value !== '') {
-      value = String(field.value).trim();
+    } else {
+      // Handle other field types
+      if (field.value_text?.trim()) {
+        value = field.value_text.trim();
+      } else if (typeof field.value === 'string' && field.value.trim()) {
+        value = field.value.trim();
+      } else if (typeof field.value === 'object' && field.value?.name) {
+        value = field.value.name;
+      } else if (field.value != null && field.value !== '' && field.value !== 0) {
+        value = String(field.value).trim();
+      } else {
+        value = "No Data";
+      }
     }
 
     if (value && value !== 'null' && value !== 'undefined') {
       counts[value] = (counts[value] || 0) + 1;
       processedTasks++;
-      console.log(`[DEBUG] Found value: "${value}"`);
+      console.log(`[DEBUG] ✅ Counted value: "${value}" (total count: ${counts[value]})`);
+    } else {
+      console.log(`[DEBUG] ❌ No valid value found for this task`);
     }
   }
 
-  if (processedTasks === 0) {
+  console.log(`\n📊 Final counts for "${fieldName}":`, counts);
+  console.log(`📈 Processed ${processedTasks} tasks with data`);
+
+  if (processedTasks === 0 || Object.keys(counts).length === 0) {
     console.warn(`⚠️ No valid data found for "${fieldName}" - generating test chart`);
     return await generateTestChart();
   }
@@ -313,23 +384,23 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
   return await generatePieChart(title, labels, data, colors, index);
 }
 
+// Enhanced field structure analysis
 function analyzeFieldStructure(tasks, fieldName) {
-  console.log(`\n🔍 ANALYZING FIELD STRUCTURE for "${fieldName}"`);
+  console.log(`\n🔍 DEEP ANALYSIS for "${fieldName}"`);
   if (!tasks || tasks.length === 0) {
     console.log(`❌ No tasks to analyze`);
     return;
   }
 
-  for (let i = 0; i < Math.min(3, tasks.length); i++) {
+  // Look at more tasks to get a better picture
+  for (let i = 0; i < Math.min(10, tasks.length); i++) {
     const task = tasks[i];
-    console.log(`\n📋 Task ${i + 1}: "${task.name?.substring(0, 30)}..."`);
+    console.log(`\n📋 Task ${i + 1}: "${task.name?.substring(0, 40)}..."`);
 
     if (!task.custom_fields) {
       console.log(`   ❌ No custom_fields array`);
       continue;
     }
-
-    console.log(`   📝 Available fields: ${task.custom_fields.map(f => f.name).join(', ')}`);
 
     const field = task.custom_fields.find(f => f.name && f.name.trim() === fieldName.trim());
     if (!field) {
@@ -340,14 +411,31 @@ function analyzeFieldStructure(tasks, fieldName) {
     console.log(`   📄 Field found!`);
     console.log(`   📄 Type: ${field.type}`);
     console.log(`   📄 Value: ${JSON.stringify(field.value)}`);
-    console.log(`   📄 Value text: ${field.value_text || 'N/A'}`);
+    console.log(`   📄 Value text: "${field.value_text}"`);
 
     if (field.type_config) {
-      console.log(`   📄 Has type_config with keys: ${Object.keys(field.type_config).join(', ')}`);
+      console.log(`   📄 Type config keys: ${Object.keys(field.type_config).join(', ')}`);
+      
+      if (field.type_config.options) {
+        console.log(`   📄 Options type: ${Array.isArray(field.type_config.options) ? 'Array' : 'Object'}`);
+        
+        if (Array.isArray(field.type_config.options)) {
+          console.log(`   📄 Options (${field.type_config.options.length} items):`);
+          field.type_config.options.slice(0, 5).forEach((opt, idx) => {
+            console.log(`      [${idx}] ID: ${opt.id}, Name: "${opt.name}", Order: ${opt.orderindex}`);
+          });
+        } else if (typeof field.type_config.options === 'object') {
+          const optKeys = Object.keys(field.type_config.options);
+          console.log(`   📄 Options object keys: ${optKeys.slice(0, 5).join(', ')}`);
+          optKeys.slice(0, 3).forEach(key => {
+            const opt = field.type_config.options[key];
+            console.log(`      "${key}": ${JSON.stringify(opt)}`);
+          });
+        }
+      }
     }
   }
 }
-
 module.exports = {
   generatePieChart,
   generateFixedColorCustomFieldChart,
