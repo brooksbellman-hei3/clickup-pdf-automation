@@ -177,8 +177,6 @@ async function emailReport(attachments, taskCount) {
     filename: `chart_${index + 1}.png`,
     path: path,
     contentType: 'image/png'
-}))
-
     }))
   });
 
