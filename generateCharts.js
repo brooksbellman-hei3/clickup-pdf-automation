@@ -3,9 +3,19 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require('sharp');
 
-// Register Chart.js components properly
-const { Chart, registerables } = require('chart.js');
-Chart.register(...registerables);
+// Register Chart.js components properly - compatible with different versions
+try {
+  const Chart = require('chart.js');
+  // Try the newer Chart.js v3+ approach first
+  if (Chart.Chart && Chart.registerables) {
+    Chart.Chart.register(...Chart.registerables);
+  } else if (Chart.register && Chart.registerables) {
+    Chart.register(...Chart.registerables);
+  }
+  // For older versions, Chart.js auto-registers components
+} catch (error) {
+  console.log('📊 Using Chart.js auto-registration (older version)');
+}
 
 async function generatePieChart(title, labels, data, colors, index = 0) {
   console.log(`\n🎨 Generating pie chart: "${title}"`);
@@ -26,8 +36,18 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     backgroundColour: '#ffffff', // Ensure white background
     chartCallback: (ChartJS) => {
       // Register any additional plugins here if needed
-      ChartJS.defaults.font.family = 'Arial, sans-serif';
-      ChartJS.defaults.font.size = 12;
+      try {
+        if (ChartJS.defaults && ChartJS.defaults.font) {
+          ChartJS.defaults.font.family = 'Arial, sans-serif';
+          ChartJS.defaults.font.size = 12;
+        } else if (ChartJS.defaults && ChartJS.defaults.global) {
+          // Older Chart.js versions
+          ChartJS.defaults.global.defaultFontFamily = 'Arial, sans-serif';
+          ChartJS.defaults.global.defaultFontSize = 12;
+        }
+      } catch (err) {
+        console.log('⚠️ Could not set Chart.js defaults:', err.message);
+      }
     }
   });
 
@@ -162,12 +182,16 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     plugins: [{
       id: 'background',
       beforeDraw: (chart) => {
-        const ctx = chart.canvas.getContext('2d');
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-over';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, chart.canvas.width, chart.canvas.height);
-        ctx.restore();
+        try {
+          const ctx = chart.canvas.getContext('2d');
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, chart.canvas.width, chart.canvas.height);
+          ctx.restore();
+        } catch (err) {
+          console.log('⚠️ Background plugin error:', err.message);
+        }
       }
     }]
   };
