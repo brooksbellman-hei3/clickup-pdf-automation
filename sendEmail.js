@@ -133,7 +133,7 @@ async function generateAllCharts(tasks) {
 async function emailReport(charts, taskCount) {
   console.log("📧 Sending email...");
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT, 10),
     secure: process.env.SMTP_PORT === "465",
