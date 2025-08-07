@@ -3,26 +3,42 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require('sharp');
 
+// Register Chart.js components properly
+const { Chart, registerables } = require('chart.js');
+Chart.register(...registerables);
+
 async function generatePieChart(title, labels, data, colors, index = 0) {
   console.log(`\n🎨 Generating pie chart: "${title}"`);
   console.log(`📊 Input data:`, { labels, data, colors });
 
+  if (!data || data.length === 0 || !labels || labels.length === 0) {
+    console.error(`❌ Invalid data for chart: ${title}`);
+    return null;
+  }
+
   const width = 800;
   const height = 600;
 
+  // Create ChartJS canvas with proper configuration
   const chartJSNodeCanvas = new ChartJSNodeCanvas({ 
     width, 
     height,
-    backgroundColour: 'white', // Ensure white background
-    type: 'image/png',
-    plugins: {
-      modern: ['chartjs-plugin-datalabels'] // Add data labels plugin if needed
+    backgroundColour: '#ffffff', // Ensure white background
+    chartCallback: (ChartJS) => {
+      // Register any additional plugins here if needed
+      ChartJS.defaults.font.family = 'Arial, sans-serif';
+      ChartJS.defaults.font.size = 12;
     }
   });
 
   // Ensure all colors are proper hex format
   const hexColors = colors.map(color => {
-    if (color.startsWith('#') && color.length === 7) return color;
+    if (!color) return '#999999';
+    
+    if (color.startsWith('#') && (color.length === 7 || color.length === 4)) {
+      return color;
+    }
+    
     if (color.startsWith('rgba')) {
       // Convert RGBA to hex
       const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -33,7 +49,23 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
       }
     }
-    return color;
+    
+    // Handle named colors
+    const colorMap = {
+      'red': '#FF0000',
+      'green': '#00FF00',
+      'blue': '#0000FF',
+      'orange': '#FFA500',
+      'yellow': '#FFFF00',
+      'purple': '#800080',
+      'pink': '#FFC0CB',
+      'black': '#000000',
+      'gray': '#808080',
+      'grey': '#808080',
+      'white': '#FFFFFF'
+    };
+    
+    return colorMap[color.toLowerCase()] || '#999999';
   });
 
   const configuration = {
@@ -41,12 +73,19 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
     data: {
       labels,
       datasets: [{
-        label: title,
         data,
         backgroundColor: hexColors,
         borderColor: '#ffffff',
         borderWidth: 2,
-        hoverBorderWidth: 3
+        hoverBorderWidth: 3,
+        hoverBackgroundColor: hexColors.map(color => {
+          // Slightly darken on hover
+          const hex = color.replace('#', '');
+          const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - 20);
+          const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - 20);
+          const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - 20);
+          return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        })
       }]
     },
     options: {
@@ -55,10 +94,10 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
       animation: false, // Disable animations for server-side rendering
       layout: {
         padding: {
-          top: 20,
-          bottom: 20,
-          left: 20,
-          right: 20
+          top: 50,
+          bottom: 50,
+          left: 50,
+          right: 150
         }
       },
       plugins: {
@@ -66,12 +105,13 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
           display: true,
           text: title,
           font: { 
-            size: 20,
-            weight: 'bold'
+            size: 24,
+            weight: 'bold',
+            family: 'Arial, sans-serif'
           },
           color: '#000000',
           padding: {
-            top: 10,
+            top: 20,
             bottom: 30
           }
         },
@@ -79,11 +119,33 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
           display: true,
           position: "right",
           labels: {
-            font: { size: 14 },
+            font: { 
+              size: 14,
+              family: 'Arial, sans-serif'
+            },
             color: '#000000',
-            padding: 15,
+            padding: 20,
             usePointStyle: true,
-            pointStyle: 'circle'
+            pointStyle: 'circle',
+            generateLabels: function(chart) {
+              const data = chart.data;
+              if (data.labels.length && data.datasets.length) {
+                return data.labels.map((label, i) => {
+                  const meta = chart.getDatasetMeta(0);
+                  const style = meta.controller.getStyle(i);
+                  return {
+                    text: `${label} (${data.datasets[0].data[i]})`,
+                    fillStyle: style.backgroundColor,
+                    strokeStyle: style.borderColor,
+                    lineWidth: style.borderWidth,
+                    pointStyle: 'circle',
+                    hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                    index: i
+                  };
+                });
+              }
+              return [];
+            }
           }
         },
         tooltip: {
@@ -96,14 +158,27 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
           borderColor: '#ffffff'
         }
       }
-    }
+    },
+    plugins: [{
+      id: 'background',
+      beforeDraw: (chart) => {
+        const ctx = chart.canvas.getContext('2d');
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, chart.canvas.width, chart.canvas.height);
+        ctx.restore();
+      }
+    }]
   };
 
   try {
     console.log(`🎨 Rendering chart with HEX colors:`, hexColors);
+    console.log(`📊 Data points:`, data);
+    console.log(`🏷️ Labels:`, labels);
 
     // Generate the chart buffer
-    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, 'image/png');
+    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
     console.log(`📊 Chart buffer size: ${buffer.length} bytes`);
 
     if (buffer.length === 0) {
@@ -111,12 +186,27 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
       return null;
     }
 
-    const filename = `chart_${index}_${Date.now()}.jpg`; // changed to .jpg
+    // Verify buffer contains valid image data
+    const bufferStart = buffer.slice(0, 8);
+    const isPNG = bufferStart[0] === 0x89 && bufferStart[1] === 0x50 && bufferStart[2] === 0x4E && bufferStart[3] === 0x47;
+    
+    if (!isPNG) {
+      console.error(`❌ Generated buffer is not a valid PNG image`);
+      console.log(`Buffer start:`, Array.from(bufferStart).map(b => '0x' + b.toString(16).padStart(2, '0')).join(' '));
+      return null;
+    }
+
+    const filename = `chart_${index}_${Date.now()}.jpg`;
     const outputPath = path.join(__dirname, filename);
 
+    // Convert PNG to JPEG using Sharp with higher quality
     const jpegBuffer = await sharp(buffer)
-    .jpeg({ quality: 90 })
-    .toBuffer();
+      .jpeg({ 
+        quality: 95,
+        progressive: true,
+        mozjpeg: true
+      })
+      .toBuffer();
 
     fs.writeFileSync(outputPath, jpegBuffer);
     
@@ -128,10 +218,11 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
       
       // Additional verification - try to read the file back
       const testBuffer = fs.readFileSync(outputPath);
-      if (testBuffer.length !== buffer.length) {
-        console.warn(`⚠️ File size mismatch: written=${buffer.length}, read=${testBuffer.length}`);
+      if (testBuffer.length === 0) {
+        console.error(`❌ Saved file is empty: ${outputPath}`);
+        return null;
       } else {
-        console.log(`✅ File verification passed`);
+        console.log(`✅ File verification passed - ${testBuffer.length} bytes written`);
       }
     } else {
       console.error(`❌ Failed to save chart file: ${outputPath}`);
@@ -142,6 +233,15 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
   } catch (error) {
     console.error(`❌ Error generating chart:`, error.message);
     console.error(error.stack);
+    
+    // Try to provide more specific error information
+    if (error.message.includes('Canvas')) {
+      console.error(`💡 Canvas-related error - this might be a ChartJS configuration issue`);
+    }
+    if (error.message.includes('render')) {
+      console.error(`💡 Rendering error - check data format and chart configuration`);
+    }
+    
     return null;
   }
 }
@@ -149,6 +249,11 @@ async function generatePieChart(title, labels, data, colors, index = 0) {
 // Custom pie chart from a field with known fixed labels/colors
 async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index) {
   console.log(`\n🎨 Generating chart for field: "${fieldName}"`);
+  
+  if (!tasks || tasks.length === 0) {
+    console.warn(`⚠️ No tasks provided for chart generation`);
+    return null;
+  }
   
   // Enhanced color mapping with multiple variations
   const colorMap = {
@@ -188,40 +293,56 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
   const counts = {};
   const foundValues = new Set();
 
+  console.log(`🔍 Processing ${tasks.length} tasks...`);
+
   // First pass: collect all unique values
   for (const task of tasks) {
-    const field = task.custom_fields?.find(f => f.name.trim() === fieldName.trim());
-    if (!field || field.value == null) continue;
+    if (!task.custom_fields) {
+      console.log(`⚠️ Task "${task.name}" has no custom_fields`);
+      continue;
+    }
+
+    const field = task.custom_fields.find(f => f.name && f.name.trim() === fieldName.trim());
+    if (!field) {
+      console.log(`⚠️ Field "${fieldName}" not found in task "${task.name}"`);
+      continue;
+    }
 
     let value = null;
 
-    // Handle different field types
-    if (field.type === 'drop_down' && field.type_config?.options) {
+    // Handle different field types more robustly
+    if (field.type === 'drop_down' && field.type_config && field.type_config.options) {
+      // Handle dropdown fields
       if (Array.isArray(field.type_config.options)) {
         const option = field.type_config.options[field.value];
-        value = option?.name;
+        value = option ? option.name : null;
       } else if (typeof field.type_config.options === 'object') {
-        value = field.type_config.options[field.value]?.name;
+        const option = field.type_config.options[field.value];
+        value = option ? option.name : null;
       }
-    } else if (field.value_text) {
+    } else if (field.value_text && field.value_text.trim()) {
       // Sometimes ClickUp stores the display text separately
-      value = field.value_text;
-    } else if (typeof field.value === 'string') {
-      value = field.value;
-    } else if (typeof field.value === 'object' && field.value.name) {
+      value = field.value_text.trim();
+    } else if (typeof field.value === 'string' && field.value.trim()) {
+      value = field.value.trim();
+    } else if (typeof field.value === 'object' && field.value && field.value.name) {
       value = field.value.name;
+    } else if (field.value !== null && field.value !== undefined && field.value !== '') {
+      // Convert any other value to string
+      value = String(field.value).trim();
     }
 
-    if (value) {
-      const cleanValue = value.toString().trim();
-      foundValues.add(cleanValue);
+    if (value && value !== 'null' && value !== 'undefined') {
+      foundValues.add(value);
       
-      if (!counts[cleanValue]) {
-        counts[cleanValue] = 0;
+      if (!counts[value]) {
+        counts[value] = 0;
       }
-      counts[cleanValue]++;
+      counts[value]++;
       
-      console.log(`[DEBUG] Task ${task.name} - ${fieldName}: ${cleanValue}`);
+      console.log(`[DEBUG] Task "${task.name.substring(0, 30)}..." - ${fieldName}: "${value}"`);
+    } else {
+      console.log(`[DEBUG] Task "${task.name.substring(0, 30)}..." - ${fieldName}: NO VALUE (raw: ${JSON.stringify(field.value)})`);
     }
   }
 
@@ -241,8 +362,9 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
     return color;
   });
 
-  if (data.length === 0) {
+  if (data.length === 0 || labels.length === 0) {
     console.warn(`⚠️ No valid data found for "${fieldName}"`);
+    console.log(`📋 Processed ${tasks.length} tasks but found no values`);
     return null;
   }
 
@@ -250,6 +372,7 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
   console.log(`   Labels: ${labels.join(', ')}`);
   console.log(`   Data: ${data.join(', ')}`);
   console.log(`   Colors: ${colors.join(', ')}`);
+  console.log(`   Total data points: ${data.reduce((a, b) => a + b, 0)}`);
 
   return await generatePieChart(title, labels, data, colors, index);
 }
@@ -258,14 +381,25 @@ async function generateFixedColorCustomFieldChart(tasks, fieldName, title, index
 function analyzeFieldStructure(tasks, fieldName) {
   console.log(`\n🔍 ANALYZING FIELD STRUCTURE for "${fieldName}"`);
   
+  if (!tasks || tasks.length === 0) {
+    console.log(`❌ No tasks to analyze`);
+    return;
+  }
+  
   for (let i = 0; i < Math.min(5, tasks.length); i++) {
     const task = tasks[i];
-    const field = task.custom_fields?.find(f => f.name.trim() === fieldName.trim());
+    const field = task.custom_fields?.find(f => f.name && f.name.trim() === fieldName.trim());
     
     console.log(`\n📋 Task ${i + 1}: "${task.name.substring(0, 30)}..."`);
     
+    if (!task.custom_fields) {
+      console.log(`   ❌ No custom_fields array`);
+      continue;
+    }
+    
     if (!field) {
       console.log(`   ❌ Field "${fieldName}" not found`);
+      console.log(`   📝 Available fields: ${task.custom_fields.map(f => f.name).join(', ')}`);
       continue;
     }
     
@@ -274,7 +408,10 @@ function analyzeFieldStructure(tasks, fieldName) {
     console.log(`   📄 Field value_text: ${field.value_text || 'N/A'}`);
     
     if (field.type_config) {
-      console.log(`   📄 Type config: ${JSON.stringify(field.type_config, null, 2)}`);
+      console.log(`   📄 Type config keys: ${Object.keys(field.type_config).join(', ')}`);
+      if (field.type_config.options) {
+        console.log(`   📄 Available options: ${JSON.stringify(field.type_config.options, null, 2)}`);
+      }
     }
   }
 }
