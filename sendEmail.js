@@ -175,7 +175,7 @@ async function emailReport(charts, taskCount) {
       <p><strong>Charts Generated:</strong> ${charts.length}</p>
       ${chartImagesHtml}
       <br>
-      <p><em>This report was generated automatically from your ClickUp workspace.</em></p>
+      <p><em>This report has been provided by Hawkeye.</em></p>
     `,
     attachments: charts.map((chart, i) => ({
       filename: `chart${i + 1}.png`,
