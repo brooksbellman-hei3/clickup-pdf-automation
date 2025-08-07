@@ -76,5 +76,3 @@ services:
         sync: false
       - key: TIMEZONE
         value: America/New_York
-      - key: SEND_HOUR
-        value: "9"
