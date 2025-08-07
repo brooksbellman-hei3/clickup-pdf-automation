@@ -12,7 +12,12 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
-    service: 'clickup-pdf-reporter-web'
+    service: 'clickup-pdf-reporter-web',
+    node_version: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    memory: process.memoryUsage(),
+    uptime: process.uptime()
   });
 });
 
@@ -26,74 +31,177 @@ app.get('/', (req, res) => {
       'GET /health - Health check',
       'GET /charts-list - List generated charts',
       'GET /charts/:filename - View specific chart',
-      'GET /generate-test-image - Generate test image'
+      'GET /generate-test-image - Generate test image',
+      'POST /trigger-report - Manually trigger report generation',
+      'GET /debug - Debug information'
     ]
   });
 });
 
-// Route to generate and serve a test red 400x400 PNG image
-app.get('/generate-test-image', (req, res) => {
-  try {
-    // Try to use canvas if available
-    const { createCanvas } = require('canvas');
-    const canvas = createCanvas(400, 400);
-    const ctx = canvas.getContext('2d');
+// Debug endpoint to check environment and modules
+app.get('/debug', async (req, res) => {
+  const debugInfo = {
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      TIMEZONE: process.env.TIMEZONE,
+      SEND_HOUR: process.env.SEND_HOUR
+    },
+    modules: {},
+    directories: {},
+    files_in_root: []
+  };
 
-    ctx.fillStyle = 'red';
-    ctx.fillRect(0, 0, 400, 400);
-    
-    // Add some text to verify fonts work
-    ctx.fillStyle = 'white';
-    ctx.font = '30px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Canvas Test', 200, 200);
-    ctx.fillText('Fonts Working', 200, 250);
-
-    const buffer = canvas.toBuffer('image/png');
-
-    // Save the generated image file on the server
-    const testImagePath = path.join(__dirname, 'test-canvas.png');
-    fs.writeFileSync(testImagePath, buffer);
-
-    res.set('Content-Type', 'image/png');
-    res.send(buffer);
-  } catch (error) {
-    console.error('Canvas test failed:', error);
-    
-    // Fallback: generate a simple image with Sharp
+  // Check module availability
+  const modulesToCheck = ['sharp', 'chartjs-node-canvas', 'axios', 'nodemailer', 'node-cron'];
+  
+  for (const moduleName of modulesToCheck) {
     try {
-      const sharp = require('sharp');
+      const module = require(moduleName);
+      debugInfo.modules[moduleName] = '✅ Available';
+    } catch (error) {
+      debugInfo.modules[moduleName] = `❌ Error: ${error.message}`;
+    }
+  }
+
+  // Check directories
+  try {
+    debugInfo.directories.current = __dirname;
+    debugInfo.directories.temp_exists = fs.existsSync('/tmp');
+    debugInfo.directories.logs_exists = fs.existsSync(path.join(__dirname, 'logs'));
+    
+    // List files in current directory
+    debugInfo.files_in_root = fs.readdirSync(__dirname).filter(f => 
+      f.endsWith('.png') || f.endsWith('.js') || f === 'package.json'
+    );
+  } catch (error) {
+    debugInfo.directories.error = error.message;
+  }
+
+  res.json(debugInfo);
+});
+
+// Manual report trigger endpoint
+app.post('/trigger-report', async (req, res) => {
+  console.log('🚀 Manual report trigger requested');
+  
+  try {
+    // Try to load and run the report function
+    const sendReport = require('./sendEmail');
+    
+    res.json({
+      message: '🔄 Report generation started',
+      timestamp: new Date().toISOString(),
+      note: 'Check logs for progress. Charts should appear at /charts-list when complete.'
+    });
+
+    // Run the report asynchronously
+    sendReport().then(() => {
+      console.log('✅ Manual report completed successfully');
+    }).catch((error) => {
+      console.error('❌ Manual report failed:', error);
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to trigger report:', error);
+    res.status(500).json({
+      error: 'Failed to trigger report',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Route to generate and serve a test image
+app.get('/generate-test-image', async (req, res) => {
+  console.log('🧪 Test image generation requested');
+  
+  try {
+    // Try to generate a test chart using our chart generation module
+    const { generateTestChart } = require('./generateCharts');
+    
+    const testChart = await generateTestChart();
+    
+    if (testChart && testChart.base64Chart) {
+      const buffer = Buffer.from(testChart.base64Chart, 'base64');
       
-      const svg = `
-        <svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
-          <rect width="100%" height="100%" fill="red"/>
-          <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="30" font-family="Arial">Sharp Test</text>
-          <text x="50%" y="60%" text-anchor="middle" fill="white" font-size="20" font-family="Arial">Fallback Image</text>
-        </svg>
-      `;
+      res.set('Content-Type', 'image/png');
+      res.set('Content-Length', buffer.length);
+      res.send(buffer);
       
-      sharp(Buffer.from(svg))
-        .png()
-        .toBuffer()
-        .then(buffer => {
-          const testImagePath = path.join(__dirname, 'test-sharp.png');
-          fs.writeFileSync(testImagePath, buffer);
-          
-          res.set('Content-Type', 'image/png');
-          res.send(buffer);
-        })
-        .catch(sharpError => {
-          console.error('Sharp fallback also failed:', sharpError);
-          res.status(500).json({ error: 'Image generation failed', details: sharpError.message });
-        });
+      console.log(`✅ Test chart generated and served: ${testChart.filename}`);
+    } else {
+      throw new Error('Test chart generation returned no data');
+    }
+    
+  } catch (chartError) {
+    console.error('Chart generation failed, trying Canvas fallback:', chartError);
+    
+    try {
+      // Try Canvas fallback
+      const { createCanvas } = require('canvas');
+      const canvas = createCanvas(400, 400);
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#28a745';
+      ctx.fillRect(0, 0, 400, 400);
+      
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 30px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Canvas Test', 200, 180);
+      ctx.fillText('✅ Working!', 200, 220);
+
+      const buffer = canvas.toBuffer('image/png');
+      
+      // Save test file
+      const testPath = path.join(__dirname, 'test-canvas.png');
+      fs.writeFileSync(testPath, buffer);
+
+      res.set('Content-Type', 'image/png');
+      res.send(buffer);
+      
+      console.log('✅ Canvas fallback test successful');
+      
+    } catch (canvasError) {
+      console.error('Canvas also failed, trying Sharp fallback:', canvasError);
+      
+      try {
+        // Sharp SVG fallback
+        const sharp = require('sharp');
         
-    } catch (sharpError) {
-      console.error('Sharp not available:', sharpError);
-      res.status(500).json({ 
-        error: 'Image generation not available', 
-        canvas_error: error.message,
-        sharp_error: sharpError.message 
-      });
+        const svg = `
+          <svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#17a2b8"/>
+            <text x="50%" y="45%" text-anchor="middle" fill="white" font-size="30" font-family="Arial">Sharp Test</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="white" font-size="30" font-family="Arial">✅ Working!</text>
+          </svg>
+        `;
+        
+        const buffer = await sharp(Buffer.from(svg))
+          .png()
+          .toBuffer();
+          
+        // Save test file
+        const testPath = path.join(__dirname, 'test-sharp.png');
+        fs.writeFileSync(testPath, buffer);
+        
+        res.set('Content-Type', 'image/png');
+        res.send(buffer);
+        
+        console.log('✅ Sharp fallback test successful');
+        
+      } catch (sharpError) {
+        console.error('All image generation methods failed:', sharpError);
+        res.status(500).json({ 
+          error: 'All image generation methods failed',
+          chart_error: chartError.message,
+          canvas_error: canvasError.message,
+          sharp_error: sharpError.message,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
   }
 });
@@ -103,12 +211,9 @@ app.use('/charts', express.static(__dirname));
 
 // Route to list all PNG chart files
 app.get('/charts-list', (req, res) => {
-  fs.readdir(__dirname, (err, files) => {
-    if (err) {
-      console.error('Error reading files:', err);
-      return res.status(500).json({ error: 'Error reading files', details: err.message });
-    }
-
+  try {
+    const files = fs.readdirSync(__dirname);
+    
     // Filter PNG files that look like charts
     const chartFiles = files.filter(f => 
       (f.startsWith('chart_') || f.startsWith('test-')) && f.endsWith('.png')
@@ -135,13 +240,24 @@ app.get('/charts-list', (req, res) => {
       }
     });
 
+    console.log(`📊 Charts list requested - found ${chartFiles.length} files`);
+
     res.json({
       message: 'Available chart files',
       count: chartFiles.length,
       files: fileInfo,
+      all_files: files.slice(0, 20), // Show first 20 files for debugging
       timestamp: new Date().toISOString()
     });
-  });
+    
+  } catch (error) {
+    console.error('Error reading chart files:', error);
+    res.status(500).json({ 
+      error: 'Error reading files', 
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Error handling middleware
@@ -170,6 +286,9 @@ if (require.main === module) {
     console.log(`🌐 ClickUp PDF Reporter Web Service listening on port ${PORT}`);
     console.log(`📍 Health check: http://localhost:${PORT}/health`);
     console.log(`📊 Charts list: http://localhost:${PORT}/charts-list`);
+    console.log(`🧪 Test image: http://localhost:${PORT}/generate-test-image`);
+    console.log(`🔧 Debug info: http://localhost:${PORT}/debug`);
+    console.log(`⚡ Manual trigger: POST http://localhost:${PORT}/trigger-report`);
   });
 }
 
