@@ -1,27 +1,46 @@
 #!/bin/bash
 
-# Exit on any error
+# build.sh - Render build script for chart dependencies
+
 set -e
 
-# Install required packages
+echo "🔨 Starting Render build process..."
+
+# Install system dependencies for Canvas and Sharp
+echo "📦 Installing system dependencies..."
+
+# Update package manager
 apt-get update
+
+# Install required packages for canvas, sharp, and fonts
 apt-get install -y \
-  fonts-dejavu-core \
-  fonts-dejavu-extra \
-  libnss3 \
-  libx11-dev \
-  libxkbcommon-dev \
-  libatk1.0-0 \
-  libcups2 \
-  libdrm2 \
-  libxcomposite1 \
-  libxdamage1 \
-  libxrandr2 \
-  libgbm1 \
-  libasound2 \
-  libpangocairo-1.0-0 \
-  libpangoft2-1.0-0 \
-  libgtk-3-0 \
-  libxss1 \
-  libxshmfence1 \
-  --no-install-recommends
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libfontconfig1-dev \
+    pkg-config \
+    python3 \
+    make \
+    g++ \
+    fonts-dejavu-core \
+    fontconfig
+
+# Set font configuration
+fc-cache -f -v
+
+# Set environment variables for canvas
+export PANGOCAIRO_BACKEND=fontconfig
+export FONTCONFIG_PATH=/etc/fonts
+
+echo "✅ System dependencies installed"
+
+# Create necessary directories
+echo "📁 Creating directories..."
+mkdir -p /tmp/charts
+mkdir -p logs
+chmod 777 /tmp/charts
+chmod 777 logs
+
+echo "✅ Build script completed successfully"
