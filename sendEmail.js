@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 
 const { fetchClickUpTasks, testClickUpConnection } = require('./fetchData');
-const { generatePieChart, generateFixedColorCustomFieldChart, analyzeFieldStructure, generateTestChart, diagnoseDropdownOptions } = require('./generateCharts');
+const { generatePieChart, generateFixedColorCustomFieldChart, analyzeFieldStructure, generateTestChart } = require('./generateCharts');
 
 function findFieldNameByKeyword(fieldNames, keyword) {
   const normalize = str =>
@@ -79,14 +79,25 @@ async function generateAllCharts(tasks) {
   console.log("🔍 Matched field name for viewer status:", viewerFieldName);
   console.log("🔍 Matched field name for tablet status:", tabletFieldName);
 
-  // Enhanced analysis with dropdown diagnosis
+  // Enhanced analysis
   if (viewerFieldName) {
     analyzeFieldStructure(tasks, viewerFieldName);
-    await diagnoseDropdownOptions(tasks, viewerFieldName);
+    
+    // Manual diagnosis since function isn't working
+    console.log(`\n🔬 MANUAL DROPDOWN DIAGNOSIS for "${viewerFieldName}"`);
+    const sampleTask = tasks.find(t => t.custom_fields);
+    if (sampleTask) {
+      const field = sampleTask.custom_fields.find(f => f.name?.trim() === viewerFieldName.trim());
+      if (field && field.type_config?.options) {
+        console.log(`✅ Found dropdown with ${field.type_config.options.length} options:`);
+        field.type_config.options.forEach((opt, i) => {
+          console.log(`   [${i}] Order: ${opt.orderindex}, Name: "${opt.name}"`);
+        });
+      }
+    }
   }
   if (tabletFieldName) {
     analyzeFieldStructure(tasks, tabletFieldName);
-    await diagnoseDropdownOptions(tasks, tabletFieldName);
   }
 
   if (viewerFieldName) {
