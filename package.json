@@ -5,7 +5,7 @@
   "main": "scheduler.js",
   "scripts": {
     "canvas-test": "node canvas_test.js",
-    "start": "node scheduler.js",
+    "start": "node server.js",
     "test": "node scheduler.js --test",
     "dev": "nodemon scheduler.js",
     "docker:build": "docker build -t clickup-pdf-reporter .",
