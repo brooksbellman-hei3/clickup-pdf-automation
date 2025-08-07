@@ -1,153 +1,65 @@
-const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-const fs = require("fs");
 const path = require("path");
-const sharp = require('sharp');
-const { registerFont } = require('canvas');
-
-registerFont('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', {
-  family: 'DejaVu Sans'
-});
+const sharp = require("sharp");
 
 async function generatePieChart(title, labels, data, colors, index = 0) {
-  try {
-    console.log(`\n🎨 Generating pie chart: "${title}"`);
-    console.log(`📊 Input data:`, { labels, data, colors });
+  const width = 800;
+  const height = 600;
 
-    if (!data || data.length === 0 || !labels || labels.length === 0) {
-      console.error(`❌ Invalid data for chart: ${title}`);
-      return null;
-    }
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height });
 
-    const width = 800;
-    const height = 600;
-
-    const chartJSNodeCanvas = new ChartJSNodeCanvas({
-      width,
-      height,
-      chartCallback: (ChartJS) => {
-        ChartJS.register({
-          id: 'whiteBackground',
-          beforeDraw: (chart) => {
-            const ctx = chart.ctx;
-            ctx.save();
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, chart.width, chart.height);
-            ctx.restore();
-          }
-        });
-      }
-    });
-
-    const hexColors = colors.map(color => {
-      if (!color) return '#999999';
-
-      if (color.startsWith('#') && (color.length === 7 || color.length === 4)) {
-        return color;
-      }
-
-      if (color.startsWith('rgba')) {
-        const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-        if (match) {
-          const r = parseInt(match[1]);
-          const g = parseInt(match[2]);
-          const b = parseInt(match[3]);
-          return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-        }
-      }
-
-      const colorMap = {
-        'red': '#FF0000',
-        'green': '#00FF00',
-        'blue': '#0000FF',
-        'orange': '#FFA500',
-        'yellow': '#FFFF00',
-        'purple': '#800080',
-        'pink': '#FFC0CB',
-        'black': '#000000',
-        'gray': '#808080',
-        'grey': '#808080',
-        'white': '#FFFFFF'
-      };
-
-      return colorMap[color.toLowerCase()] || '#999999';
-    });
-
-    const configuration = {
-      type: "pie",
-      data: {
-        labels,
-        datasets: [{
-          data,
-          backgroundColor: hexColors,
-          borderColor: '#ffffff',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: false,
-        maintainAspectRatio: false,
-        animation: false,
-        layout: { padding: 40 },
-        plugins: {
-          title: {
-            display: true,
-            text: title,
-            font: { size: 20, weight: 'bold' },
-            color: '#000000',
-            padding: 20
-          },
-          legend: {
-            display: true,
-            position: "right",
-            labels: {
-              font: { size: 12 },
-              color: '#000000',
-              padding: 10,
-              generateLabels: function(chart) {
-                const data = chart.data;
-                if (data.labels.length && data.datasets.length) {
-                  return data.labels.map((label, i) => ({
-                    text: `${label}: ${data.datasets[0].data[i]}`,
-                    fillStyle: data.datasets[0].backgroundColor[i],
-                    strokeStyle: '#ffffff',
-                    lineWidth: 2,
-                    pointStyle: 'rect',
-                    hidden: false,
-                    index: i
-                  }));
-                }
-                return [];
-              }
-            }
-          }
-        }
-      },
-      plugins: [{
-        id: 'whiteBackground',
-        beforeDraw: (chart) => {
-          const { ctx } = chart;
-          ctx.save();
-          ctx.fillStyle = 'white';
-          ctx.fillRect(0, 0, chart.width, chart.height);
-          ctx.restore();
-        }
+  const configuration = {
+    type: 'pie',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors
       }]
-    };
+    },
+    options: {
+      plugins: {
+        title: {
+          display: true,
+          text: title,
+          font: { size: 24 }
+        },
+        legend: {
+          position: 'right',
+          labels: {
+            font: { size: 16 }
+          }
+        }
+      }
+    },
+    plugins: [{
+      id: 'whiteBackground',
+      beforeDraw: (chart) => {
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+      }
+    }]
+  };
 
-    const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
+  // Render to buffer
+  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
 
-    const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
-    await sharp(buffer)
-      .flatten({ background: '#ffffff' }) // Ensures non-transparent background
-      .toFile(filePath);
+  // Convert PNG buffer to Base64
+  const base64Chart = buffer.toString('base64');
 
-    console.log(`✅ Chart saved: ${filePath}`);
-    return filePath;
+  // Optional: Save to file
+  const filePath = path.join(__dirname, `chart_${index}_${Date.now()}.png`);
+  await sharp(buffer)
+    .flatten({ background: '#ffffff' }) // force white background
+    .toFile(filePath);
 
-  } catch (error) {
-    console.error(`❌ Error generating chart: ${error.message}`);
-    return null;
-  }
+  console.log(`✅ Chart saved: ${filePath}`);
+
+  // Return both
+  return { filePath, base64Chart };
 }
 
 // Test function to generate a simple chart without data processing
