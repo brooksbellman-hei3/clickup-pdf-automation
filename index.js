@@ -1,8 +1,10 @@
-// index.js
 console.log("🚀 Starting both scheduler and server...");
 
-// Start the scheduler
 require('./scheduler');
 
-// Start the Express server
-require('./server');
+const app = require('./server');
+const PORT = process.env.PORT || 10000;
+
+app.listen(PORT, () => {
+  console.log(`🌐 Web service is listening on port ${PORT}`);
+});
