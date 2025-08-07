@@ -167,9 +167,9 @@ async function emailReport(charts, taskCount) {
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to: process.env.EMAIL_TO,
-    subject: `📊 Daily ClickUp Report - ${currentDate}`,
+    subject: `📊 Daily NBA Dashboard - ${currentDate}`,
     html: `
-      <h2>📊 Daily ClickUp Report</h2>
+      <h2>📊 Daily NBA Dashboard</h2>
       <p><strong>Date:</strong> ${currentDate}</p>
       <p><strong>Total Tasks Processed:</strong> ${taskCount}</p>
       <p><strong>Charts Generated:</strong> ${charts.length}</p>
