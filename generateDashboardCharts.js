@@ -13,32 +13,32 @@ try {
 
 // Executive dashboard field configuration
 const EXECUTIVE_FIELDS = [
-  'Live Tracking Delivery (drop down)',
-  'Scrubbed Delivery (drop down)', 
-  'Replay Delivery (drop down)',
-  'Operations P-Status  (drop down)',
-  'Software P-Status  (drop down)',
-  'Hardware P-Status (drop down)',
-  'NBA SLA Delivery Time (drop down)',
-  'Scrub SLA  (drop down)',
-  'Resend (drop down)'
+  'Live Tracking Delivery',
+  'Scrubbed Delivery', 
+  'Replay Delivery',
+  'Operations P-Status ',
+  'Software P-Status ',
+  'Hardware P-Status',
+  'NBA SLA Delivery Time',
+  'Scrub SLA ',
+  'Resend'
 ];
 
 // Fields that should be displayed as number cards instead of charts
 // Note: These are still generated as charts but displayed as number cards in the header
 const NUMBER_CARD_FIELDS = [
-  'NBA SLA Delivery Time (drop down)',
-  'Scrub SLA  (drop down)', 
-  'Resend (drop down)'
+  'NBA SLA Delivery Time',
+  'Scrub SLA ', 
+  'Resend'
 ];
 
 // Field name mappings for common variations
 const FIELD_NAME_MAPPINGS = {
-  'Scrub SLA  (drop down)': ['Scrub SLA  (drop down)', 'Scrub SLA (drop down)', 'Scrubbed SLA', 'Scrub SLA Delivery'],
-  'NBA SLA Delivery Time (drop down)': ['NBA SLA Delivery Time (drop down)', 'NBA SLA Delivery Time', 'NBA SLA Delivery', 'NBA SLA Time'],
-  'Live Tracking Delivery (drop down)': ['Live Tracking Delivery (drop down)', 'Live Tracking Delivery', 'Live Tracking', 'Live Delivery'],
-  'Replay Delivery (drop down)': ['Replay Delivery (drop down)', 'Replay Delivery', 'Replay', 'Replay Tracking'],
-  'Resend (drop down)': ['Resend (drop down)', 'Resend', 'Resend Required', 'Resend Flag']
+  'Scrub SLA ': ['Scrub SLA ', 'Scrub SLA', 'Scrubbed SLA', 'Scrub SLA Delivery'],
+  'NBA SLA Delivery Time': ['NBA SLA Delivery Time', 'NBA SLA Delivery', 'NBA SLA Time'],
+  'Live Tracking Delivery': ['Live Tracking Delivery', 'Live Tracking', 'Live Delivery'],
+  'Replay Delivery': ['Replay Delivery', 'Replay', 'Replay Tracking'],
+  'Resend': ['Resend', 'Resend Required', 'Resend Flag']
 };
 
 // Color scheme for executive dashboard
@@ -354,16 +354,16 @@ function calculateDashboardStats(tasks, specificDate = null) {
   
   // Calculate delivery percentages
   const liveTrackingField = tasks[0]?.custom_fields?.find(f => 
-    f.name === 'Live Tracking Delivery (drop down)' || f.name === 'live tracking delivery (drop down)'
+    f.name === 'Live Tracking Delivery' || f.name === 'live tracking delivery'
   );
   const replayField = tasks[0]?.custom_fields?.find(f => 
-    f.name === 'Replay Delivery (drop down)' || f.name === 'replay delivery (drop down)'
+    f.name === 'Replay Delivery' || f.name === 'replay delivery'
   );
   
   if (liveTrackingField) {
     const liveTrackingValues = tasks.map(task => {
       const field = task.custom_fields?.find(f => 
-        f.name === 'Live Tracking Delivery (drop down)' || f.name === 'live tracking delivery (drop down)'
+        f.name === 'Live Tracking Delivery' || f.name === 'live tracking delivery'
       );
       return field?.value || field?.value?.value || field?.value_text || 'Unknown';
     }).filter(v => v !== 'Unknown');
@@ -388,7 +388,7 @@ function calculateDashboardStats(tasks, specificDate = null) {
   if (replayField) {
     const replayValues = tasks.map(task => {
       const field = task.custom_fields?.find(f => 
-        f.name === 'Replay Delivery (drop down)' || f.name === 'replay delivery (drop down)'
+        f.name === 'Replay Delivery' || f.name === 'replay delivery'
       );
       return field?.value || field?.value?.value || field?.value_text || 'Unknown';
     }).filter(v => v !== 'Unknown');
@@ -416,7 +416,7 @@ function calculateDashboardStats(tasks, specificDate = null) {
   
   tasks.forEach(task => {
     const field = task.custom_fields?.find(f => 
-      f.name === 'NBA SLA Delivery Time (drop down)' || f.name === 'nba sla delivery time (drop down)'
+      f.name === 'NBA SLA Delivery Time' || f.name === 'nba sla delivery time'
     );
     if (field) {
       totalSLAs++;
@@ -433,13 +433,13 @@ function calculateDashboardStats(tasks, specificDate = null) {
   
   // Calculate resend percentage
   const resendField = tasks[0]?.custom_fields?.find(f => 
-    f.name === 'Resend (drop down)' || f.name === 'resend (drop down)'
+    f.name === 'Resend' || f.name === 'resend'
   );
   
   if (resendField) {
     const resendValues = tasks.map(task => {
       const field = task.custom_fields?.find(f => 
-        f.name === 'Resend (drop down)' || f.name === 'resend (drop down)'
+        f.name === 'Resend' || f.name === 'resend'
       );
       return field?.value || field?.value?.value || field?.value_text || 'No';
     }).filter(v => v !== 'No');
@@ -468,7 +468,7 @@ function calculateDashboardStats(tasks, specificDate = null) {
     
     yesterdayTasks.forEach(task => {
       const field = task.custom_fields?.find(f => 
-        f.name === 'NBA SLA Delivery Time (drop down)' || f.name === 'nba sla delivery time (drop down)'
+        f.name === 'NBA SLA Delivery Time' || f.name === 'nba sla delivery time'
       );
       if (field) {
         const value = field.value || field.value?.value || field.value_text || '';
@@ -488,7 +488,7 @@ function calculateDashboardStats(tasks, specificDate = null) {
     // Last night's resend count
     const lastNightResendValues = yesterdayTasks.map(task => {
       const field = task.custom_fields?.find(f => 
-        f.name === 'Resend (drop down)' || f.name === 'resend (drop down)'
+        f.name === 'Resend' || f.name === 'resend'
       );
       return field?.value || field?.value?.value || field?.value_text || 'No';
     });
