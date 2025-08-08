@@ -131,6 +131,12 @@
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
+        
+        .chart-image svg {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
 
         .date-controls {
             display: flex;
@@ -431,7 +437,7 @@
                 const data = await response.json();
                 // Only show the second row (charts 9-18)
                 const secondRowCharts = data.charts.slice(9);
-                displayCharts(container, secondRowCharts, data.stats);
+                displayCharts(container, secondRowCharts, data.stats, data.numberCardStats);
                 
                 // Update last night's games counter
                 updateRowCounters(null, data.stats.lastNightsGames);
@@ -468,27 +474,39 @@
         }
 
         // Display charts in container
-        function displayCharts(container, charts, stats) {
+        function displayCharts(container, charts, stats, numberCardStats) {
             if (!charts || charts.length === 0) {
                 container.innerHTML = '<div class="error">No data available for the selected date range</div>';
                 return;
             }
             
-            container.innerHTML = charts.map(chart => `
-                <div class="chart-container">
-                    <div class="chart-title">${chart.title}</div>
-                    <img src="data:image/png;base64,${chart.base64Chart}" alt="${chart.title}" class="chart-image">
-                </div>
-            `).join('');
+            container.innerHTML = charts.map(chart => {
+                // Check if it's an SVG chart
+                if (chart.svg) {
+                    return `
+                        <div class="chart-container">
+                            <div class="chart-title">${chart.title}</div>
+                            <div class="chart-image">${chart.svg}</div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="chart-container">
+                            <div class="chart-title">${chart.title}</div>
+                            <img src="data:image/png;base64,${chart.base64Chart}" alt="${chart.title}" class="chart-image">
+                        </div>
+                    `;
+                }
+            }).join('');
             
             // Update stats if provided
             if (stats) {
-                updateStats(stats);
+                updateStats(stats, numberCardStats);
             }
         }
 
         // Update dashboard statistics
-        function updateStats(stats) {
+        function updateStats(stats, numberCardStats) {
             // Season overview stats
             if (stats.totalGames !== undefined) {
                 document.getElementById('totalGames').textContent = stats.totalGames;
@@ -519,6 +537,55 @@
             if (stats.lastNightResends !== undefined) {
                 document.getElementById('lastNightResends').textContent = stats.lastNightResends;
             }
+            
+            // Update number card stats if provided
+            if (numberCardStats) {
+                updateNumberCardStats(numberCardStats);
+            }
+        }
+        
+        // Update number card statistics
+        function updateNumberCardStats(numberCardStats) {
+            console.log('Updating number card stats:', numberCardStats);
+            
+            // Update NBA SLA Delivery Time stats
+            if (numberCardStats['NBA SLA Delivery Time']) {
+                const slaStats = numberCardStats['NBA SLA Delivery Time'];
+                const hitSLA = slaStats['Hit SLA'] || 0;
+                const totalSLA = Object.values(slaStats).reduce((sum, count) => sum + count, 0);
+                const hitPercentage = totalSLA > 0 ? Math.round((hitSLA / totalSLA) * 100) : 0;
+                
+                // Update the SLA stat in the header
+                const slaElement = document.getElementById('slaHitPercentage');
+                if (slaElement) {
+                    slaElement.textContent = hitPercentage + '%';
+                }
+            }
+            
+            // Update Scrub SLA stats
+            if (numberCardStats['Scrub SLA ']) {
+                const scrubStats = numberCardStats['Scrub SLA '];
+                const yesScrub = scrubStats['NBA | Yes | < 30 Mins Post Game'] || 0;
+                const totalScrub = Object.values(scrubStats).reduce((sum, count) => sum + count, 0);
+                const scrubPercentage = totalScrub > 0 ? Math.round((yesScrub / totalScrub) * 100) : 0;
+                
+                // Add a new stat for Scrub SLA if needed
+                console.log(`Scrub SLA: ${scrubPercentage}% (${yesScrub}/${totalScrub})`);
+            }
+            
+            // Update Resend stats
+            if (numberCardStats['Resend']) {
+                const resendStats = numberCardStats['Resend'];
+                const yesResend = resendStats['Yes'] || 0;
+                const totalResend = Object.values(resendStats).reduce((sum, count) => sum + count, 0);
+                const resendPercentage = totalResend > 0 ? Math.round((yesResend / totalResend) * 100) : 0;
+                
+                // Update the resend stat in the header
+                const resendElement = document.getElementById('resendPercentage');
+                if (resendElement) {
+                    resendElement.textContent = resendPercentage + '%';
+                }
+            }
         }
 
         // Update row counters
@@ -546,7 +613,7 @@
                 }
                 
                 const data = await response.json();
-                displayCharts(container, data.charts, data.stats);
+                displayCharts(container, data.charts, data.stats, data.numberCardStats);
                 
                 // Update total games counter
                 updateRowCounters(data.stats.totalTasks);

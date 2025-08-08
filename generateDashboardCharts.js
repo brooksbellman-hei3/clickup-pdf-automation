@@ -11,6 +11,16 @@ try {
   ChartJSNodeCanvas = null;
 }
 
+// Try to load Sharp
+let sharp;
+try {
+  sharp = require("sharp");
+  console.log("✅ Sharp loaded successfully");
+} catch (error) {
+  console.warn("⚠️ Sharp failed to load:", error.message);
+  sharp = null;
+}
+
 // Executive dashboard field configuration
 const EXECUTIVE_FIELDS = [
   'Live Tracking Delivery',
@@ -677,8 +687,17 @@ async function generatePieChart(title, labels, data, colors, index) {
     }
   }
   
-  // Fallback to Sharp-based chart
-  return await generateSharpChart(title, labels, data, colors, index, width, height);
+  // Try Sharp-based chart
+  if (sharp) {
+    try {
+      return await generateSharpChart(title, labels, data, colors, index, width, height);
+    } catch (error) {
+      console.warn(`⚠️ Sharp failed for "${title}", falling back to simple SVG:`, error.message);
+    }
+  }
+  
+  // Fallback to simple SVG chart
+  return await generateSimpleSVGChart(title, labels, data, colors, index, width, height);
 }
 
 async function generateChartJSChart(title, labels, data, colors, index, width, height) {
@@ -937,6 +956,92 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
     
   console.log(`   Sharp buffer size: ${buffer.length} bytes`);
   return await processChartBuffer(buffer, title, index);
+}
+
+// Simple SVG chart generation as final fallback
+async function generateSimpleSVGChart(title, labels, data, colors, index, width, height) {
+  console.log(`   Generating simple SVG fallback chart...`);
+  
+  const total = data.reduce((sum, val) => sum + val, 0);
+  const chartCenterX = width * 0.35;
+  const chartCenterY = height * 0.5;
+  const radius = Math.min(width * 0.2, height * 0.2);
+  
+  let currentAngle = -Math.PI / 2;
+  const slices = data.map((value, i) => {
+    const percentage = (value / total) * 100;
+    const sliceAngle = (value / total) * 2 * Math.PI;
+    
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + sliceAngle;
+    
+    const startX = chartCenterX + Math.cos(startAngle) * radius;
+    const startY = chartCenterY + Math.sin(startAngle) * radius;
+    const endX = chartCenterX + Math.cos(endAngle) * radius;
+    const endY = chartCenterY + Math.sin(endAngle) * radius;
+    
+    const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
+    
+    const pathData = [
+      `M ${chartCenterX} ${chartCenterY}`,
+      `L ${startX} ${startY}`,
+      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+      `Z`
+    ].join(' ');
+    
+    currentAngle = endAngle;
+    
+    return {
+      path: pathData,
+      color: colors[i] || '#666',
+      label: labels[i],
+      value: value,
+      percentage: percentage.toFixed(1)
+    };
+  });
+  
+  const legendX = width * 0.6;
+  const legendStartY = height * 0.25;
+  const labelHeight = 20;
+  
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>
+          .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }
+          .legend-text { font-family: Arial, sans-serif; font-size: 12px; fill: #000; }
+          .legend-value { font-family: Arial, sans-serif; font-size: 10px; fill: #666; }
+        </style>
+      </defs>
+      
+      <rect width="100%" height="100%" fill="white"/>
+      
+      <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
+      
+      ${slices.map(slice => `
+        <path d="${slice.path}" fill="${slice.color}" stroke="white" stroke-width="2"/>
+      `).join('')}
+      
+      ${slices.map((slice, i) => `
+        <rect x="${legendX}" y="${legendStartY + i * labelHeight}" width="12" height="12" fill="${slice.color}"/>
+        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 9}" class="legend-text">${slice.label}</text>
+        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 9 + 12}" class="legend-value">${slice.value} (${slice.percentage}%)</text>
+      `).join('')}
+    </svg>
+  `;
+  
+  console.log(`   Generated simple SVG chart`);
+  
+  // Convert SVG to base64 for dashboard display
+  const base64Chart = Buffer.from(svg).toString('base64');
+  
+  return {
+    title: title,
+    filePath: `chart_${index}.svg`,
+    buffer: Buffer.from(svg),
+    base64Chart: base64Chart,
+    svg: svg
+  };
 }
 
 module.exports = {

@@ -371,6 +371,7 @@ app.get('/api/dashboard/complete', async (req, res) => {
       charts: result.charts,
       specificDate: specificDate,
       stats: result.stats,
+      numberCardStats: result.numberCardStats,
       timestamp: new Date().toISOString()
     });
     
