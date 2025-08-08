@@ -41,6 +41,60 @@ const FIELD_NAME_MAPPINGS = {
   'Resend': ['Resend', 'Resend Required', 'Resend Flag']
 };
 
+// Helper function to find field by name with flexible matching
+function findFieldByName(fields, targetName) {
+  if (!fields || !Array.isArray(fields)) return null;
+  
+  // First try exact match
+  let field = fields.find(f => f.name === targetName);
+  if (field) return field;
+  
+  // Try case-insensitive match
+  field = fields.find(f => f.name.toLowerCase() === targetName.toLowerCase());
+  if (field) return field;
+  
+  // Try partial match
+  field = fields.find(f => f.name.toLowerCase().includes(targetName.toLowerCase()));
+  if (field) return field;
+  
+  // Try with mappings
+  const mappings = FIELD_NAME_MAPPINGS[targetName];
+  if (mappings) {
+    for (const mapping of mappings) {
+      field = fields.find(f => f.name === mapping);
+      if (field) return field;
+      
+      field = fields.find(f => f.name.toLowerCase() === mapping.toLowerCase());
+      if (field) return field;
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to get field value consistently
+function getFieldValue(field) {
+  if (!field) return null;
+  
+  // Try value_text first (most reliable)
+  if (field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
+    return field.value_text.trim();
+  }
+  
+  // Try value property
+  if (field.value !== null && field.value !== undefined && field.value !== '') {
+    if (typeof field.value === 'string') {
+      return field.value.trim();
+    } else if (typeof field.value === 'object' && field.value.name) {
+      return field.value.name;
+    } else {
+      return String(field.value).trim();
+    }
+  }
+  
+  return null;
+}
+
 // Color scheme for executive dashboard
 const EXECUTIVE_COLOR_SCHEME = {
   // Priority levels (S1-S5, P1-P5) - including all variations
@@ -157,6 +211,41 @@ const EXECUTIVE_COLOR_SCHEME = {
   'default': '#6c757d'
 };
 
+// NEW: Function to generate number card stats for dashboard header
+function generateNumberCardStats(tasks) {
+  console.log('📊 Generating number card stats for dashboard header...');
+  
+  const stats = {};
+  
+  // Process each number card field
+  NUMBER_CARD_FIELDS.forEach(fieldName => {
+    console.log(`📊 Processing number card field: "${fieldName}"`);
+    
+    const values = tasks.map(task => {
+      const field = findFieldByName(task.custom_fields, fieldName);
+      return field ? getFieldValue(field) : null;
+    }).filter(v => v !== null);
+    
+    if (values.length > 0) {
+      // Count unique values and their frequencies
+      const counts = {};
+      values.forEach(value => {
+        counts[value] = (counts[value] || 0) + 1;
+      });
+      
+      // Store the counts for this field
+      stats[fieldName] = counts;
+      console.log(`📊 ${fieldName} stats:`, counts);
+    } else {
+      console.log(`⚠️ No values found for ${fieldName}`);
+      stats[fieldName] = {};
+    }
+  });
+  
+  return stats;
+}
+
+// Modified function to generate charts excluding number card fields
 async function generateExecutiveDashboardCharts(tasks, dateRange = null, specificDate = null) {
   console.log(`🎨 Generating executive dashboard charts for ${tasks.length} tasks`);
   if (dateRange) {
@@ -168,12 +257,17 @@ async function generateExecutiveDashboardCharts(tasks, dateRange = null, specifi
   
   const charts = [];
   
-  // Generate charts for each executive field
+  // Generate charts for each executive field (excluding number card fields)
   for (let i = 0; i < EXECUTIVE_FIELDS.length; i++) {
     const fieldName = EXECUTIVE_FIELDS[i];
     
-    // Note: Number card fields are still generated as charts but also displayed as number cards in header
-    console.log(`📊 Processing field: ${fieldName} (${NUMBER_CARD_FIELDS.includes(fieldName) ? 'number card field' : 'chart field'})`);
+    // Skip number card fields - they will be displayed as stats in header
+    if (NUMBER_CARD_FIELDS.includes(fieldName)) {
+      console.log(`📊 Skipping number card field: ${fieldName} (will be displayed as stats)`);
+      continue;
+    }
+    
+    console.log(`📊 Processing chart field: ${fieldName}`);
     
     let chartTitle = fieldName;
     
@@ -312,18 +406,18 @@ function filterTasksByEventDate(tasks, targetDate) {
   });
 }
 
-// NEW: Function to generate both rows of charts (18 total)
+// Modified complete dashboard function to include number card stats
 async function generateCompleteDashboardCharts(tasks, specificDate = null) {
-  console.log(`🎨 Generating complete dashboard with 18 charts`);
+  console.log(`🎨 Generating complete dashboard with charts and number card stats`);
   
   const allCharts = [];
   
-  // Row 1: All-time charts (9 charts)
+  // Row 1: All-time charts (excluding number card fields)
   console.log(`\n📊 Row 1: Generating all-time charts...`);
   const allTimeCharts = await generateAllTimeCharts(tasks);
   allCharts.push(...allTimeCharts);
   
-  // Row 2: Specific date charts (9 charts)
+  // Row 2: Specific date charts (excluding number card fields)
   if (specificDate) {
     console.log(`\n📊 Row 2: Generating specific date charts for ${specificDate}...`);
     const specificDateCharts = await generateSpecificDateCharts(tasks, specificDate);
@@ -335,10 +429,16 @@ async function generateCompleteDashboardCharts(tasks, specificDate = null) {
   // Calculate dashboard statistics
   const stats = calculateDashboardStats(tasks, specificDate);
   
+  // Generate number card stats for header display
+  const numberCardStats = generateNumberCardStats(tasks);
+  
   console.log(`\n📈 Total charts generated: ${allCharts.length}`);
+  console.log(`📊 Number card stats generated for header display`);
+  
   return {
     charts: allCharts,
-    stats: stats
+    stats: stats,
+    numberCardStats: numberCardStats
   };
 }
 
@@ -352,22 +452,13 @@ function calculateDashboardStats(tasks, specificDate = null) {
   stats.totalGames = tasks.length;
   console.log(`📊 Total games count: ${stats.totalGames}`);
   
-  // Calculate delivery percentages
-  const liveTrackingField = tasks[0]?.custom_fields?.find(f => 
-    f.name === 'Live Tracking Delivery' || f.name === 'live tracking delivery'
-  );
-  const replayField = tasks[0]?.custom_fields?.find(f => 
-    f.name === 'Replay Delivery' || f.name === 'replay delivery'
-  );
+  // Calculate delivery percentages using improved field finding
+  const liveTrackingValues = tasks.map(task => {
+    const field = findFieldByName(task.custom_fields, 'Live Tracking Delivery');
+    return field ? getFieldValue(field) : null;
+  }).filter(v => v !== null && v !== 'Unknown');
   
-  if (liveTrackingField) {
-    const liveTrackingValues = tasks.map(task => {
-      const field = task.custom_fields?.find(f => 
-        f.name === 'Live Tracking Delivery' || f.name === 'live tracking delivery'
-      );
-      return field?.value || field?.value?.value || field?.value_text || 'Unknown';
-    }).filter(v => v !== 'Unknown');
-    
+  if (liveTrackingValues.length > 0) {
     const deliveredCount = liveTrackingValues.filter(v => {
       const valueStr = String(v).toLowerCase();
       return valueStr === 's5: good' || 
@@ -378,21 +469,19 @@ function calculateDashboardStats(tasks, specificDate = null) {
              valueStr === 's4 - minor issues (e)';
     }).length;
     
-    stats.liveTrackingDelivery = liveTrackingValues.length > 0 ? Math.round((deliveredCount / liveTrackingValues.length) * 100) : 0;
+    stats.liveTrackingDelivery = Math.round((deliveredCount / liveTrackingValues.length) * 100);
     console.log(`📊 Live Tracking Delivery: ${deliveredCount}/${liveTrackingValues.length} = ${stats.liveTrackingDelivery}%`);
   } else {
-    console.log(`⚠️ Live Tracking Delivery field not found`);
+    console.log(`⚠️ Live Tracking Delivery field not found or no valid values`);
     stats.liveTrackingDelivery = 0;
   }
   
-  if (replayField) {
-    const replayValues = tasks.map(task => {
-      const field = task.custom_fields?.find(f => 
-        f.name === 'Replay Delivery' || f.name === 'replay delivery'
-      );
-      return field?.value || field?.value?.value || field?.value_text || 'Unknown';
-    }).filter(v => v !== 'Unknown');
-    
+  const replayValues = tasks.map(task => {
+    const field = findFieldByName(task.custom_fields, 'Replay Delivery');
+    return field ? getFieldValue(field) : null;
+  }).filter(v => v !== null && v !== 'Unknown');
+  
+  if (replayValues.length > 0) {
     const deliveredCount = replayValues.filter(v => {
       const valueStr = String(v).toLowerCase();
       return valueStr === 's5: good' || 
@@ -403,10 +492,10 @@ function calculateDashboardStats(tasks, specificDate = null) {
              valueStr === 's4 - minor issues (e)';
     }).length;
     
-    stats.replayDelivery = replayValues.length > 0 ? Math.round((deliveredCount / replayValues.length) * 100) : 0;
+    stats.replayDelivery = Math.round((deliveredCount / replayValues.length) * 100);
     console.log(`📊 Replay Delivery: ${deliveredCount}/${replayValues.length} = ${stats.replayDelivery}%`);
   } else {
-    console.log(`⚠️ Replay Delivery field not found`);
+    console.log(`⚠️ Replay Delivery field not found or no valid values`);
     stats.replayDelivery = 0;
   }
   
@@ -415,15 +504,15 @@ function calculateDashboardStats(tasks, specificDate = null) {
   let hitSLAs = 0;
   
   tasks.forEach(task => {
-    const field = task.custom_fields?.find(f => 
-      f.name === 'NBA SLA Delivery Time' || f.name === 'nba sla delivery time'
-    );
+    const field = findFieldByName(task.custom_fields, 'NBA SLA Delivery Time');
     if (field) {
       totalSLAs++;
-      const value = field.value || field.value?.value || field.value_text || '';
-      const valueStr = String(value).toLowerCase();
-      if (valueStr === 'hit sla') {
-        hitSLAs++;
+      const value = getFieldValue(field);
+      if (value) {
+        const valueStr = String(value).toLowerCase();
+        if (valueStr === 'hit sla') {
+          hitSLAs++;
+        }
       }
     }
   });
@@ -432,27 +521,21 @@ function calculateDashboardStats(tasks, specificDate = null) {
   console.log(`📊 SLA Hit Percentage: ${hitSLAs}/${totalSLAs} = ${stats.slaHitPercentage}%`);
   
   // Calculate resend percentage
-  const resendField = tasks[0]?.custom_fields?.find(f => 
-    f.name === 'Resend' || f.name === 'resend'
-  );
+  const resendValues = tasks.map(task => {
+    const field = findFieldByName(task.custom_fields, 'Resend');
+    return field ? getFieldValue(field) : null;
+  }).filter(v => v !== null);
   
-  if (resendField) {
-    const resendValues = tasks.map(task => {
-      const field = task.custom_fields?.find(f => 
-        f.name === 'Resend' || f.name === 'resend'
-      );
-      return field?.value || field?.value?.value || field?.value_text || 'No';
-    }).filter(v => v !== 'No');
-    
+  if (resendValues.length > 0) {
     const resendCount = resendValues.filter(v => {
       const valueStr = String(v).toLowerCase();
       return valueStr === 'yes';
     }).length;
     
-    stats.resendPercentage = resendValues.length > 0 ? Math.round((resendCount / resendValues.length) * 100) : 0;
+    stats.resendPercentage = Math.round((resendCount / resendValues.length) * 100);
     console.log(`📊 Resend Percentage: ${resendCount}/${resendValues.length} = ${stats.resendPercentage}%`);
   } else {
-    console.log(`⚠️ Resend field not found`);
+    console.log(`⚠️ Resend field not found or no valid values`);
     stats.resendPercentage = 0;
   }
   
@@ -467,16 +550,16 @@ function calculateDashboardStats(tasks, specificDate = null) {
     let lastNightMissedSLAs = 0;
     
     yesterdayTasks.forEach(task => {
-      const field = task.custom_fields?.find(f => 
-        f.name === 'NBA SLA Delivery Time' || f.name === 'nba sla delivery time'
-      );
+      const field = findFieldByName(task.custom_fields, 'NBA SLA Delivery Time');
       if (field) {
-        const value = field.value || field.value?.value || field.value_text || '';
-        const valueStr = String(value).toLowerCase();
-        if (valueStr === 'hit sla') {
-          lastNightHitSLAs++;
-        } else {
-          lastNightMissedSLAs++;
+        const value = getFieldValue(field);
+        if (value) {
+          const valueStr = String(value).toLowerCase();
+          if (valueStr === 'hit sla') {
+            lastNightHitSLAs++;
+          } else {
+            lastNightMissedSLAs++;
+          }
         }
       }
     });
@@ -487,11 +570,9 @@ function calculateDashboardStats(tasks, specificDate = null) {
     
     // Last night's resend count
     const lastNightResendValues = yesterdayTasks.map(task => {
-      const field = task.custom_fields?.find(f => 
-        f.name === 'Resend' || f.name === 'resend'
-      );
-      return field?.value || field?.value?.value || field?.value_text || 'No';
-    });
+      const field = findFieldByName(task.custom_fields, 'Resend');
+      return field ? getFieldValue(field) : null;
+    }).filter(v => v !== null);
     
     const lastNightResendCount = lastNightResendValues.filter(v => {
       const valueStr = String(v).toLowerCase();
@@ -533,87 +614,14 @@ async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
     if (!task.custom_fields) continue;
     
     // Try to find the field with flexible name matching
-    let field = task.custom_fields.find(f => f.name && f.name.trim() === fieldName.trim());
+    let field = findFieldByName(task.custom_fields, fieldName);
     
-    // If not found, try field name mappings
-    if (!field && FIELD_NAME_MAPPINGS[fieldName]) {
-      field = task.custom_fields.find(f => 
-        f.name && FIELD_NAME_MAPPINGS[fieldName].some(mappedName => 
-          f.name.trim().toLowerCase() === mappedName.trim().toLowerCase()
-        )
-      );
-    }
-    
-    // If still not found, try partial matching
     if (!field) {
-      field = task.custom_fields.find(f => 
-        f.name && f.name.trim().toLowerCase().includes(fieldName.trim().toLowerCase())
-      );
+      console.log(`❌ Field "${fieldName}" not found in custom_fields for task: ${task.name}`);
+      continue;
     }
-    
-    if (!field) continue;
 
-    let value = null;
-
-    if (field.type === 'drop_down') {
-      // Handle ClickUp dropdown fields
-      if (field.type_config?.options) {
-        // Try different ways to get the dropdown value
-        if (field.value !== null && field.value !== undefined && field.value !== 0) {
-          const options = field.type_config.options;
-          if (Array.isArray(options)) {
-            const option = options.find(opt => opt.id === field.value || opt.orderindex === field.value);
-            value = option?.name || null;
-          } else if (typeof options === 'object') {
-            const optionKey = Object.keys(options).find(key => 
-              options[key].id === field.value || 
-              key === String(field.value) ||
-              options[key].orderindex === field.value
-            );
-            value = optionKey ? options[optionKey].name : null;
-          }
-        }
-        
-        // If we still don't have a value, check value_text
-        if (!value && field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
-          value = field.value_text.trim();
-        }
-        
-        // Handle the case where value is 0
-        if (!value && field.value === 0) {
-          const options = field.type_config.options;
-          if (Array.isArray(options) && options.length > 0) {
-            const zeroOption = options.find(opt => opt.orderindex === 0);
-            if (zeroOption) {
-              value = zeroOption.name;
-            } else {
-              value = options[0].name;
-            }
-          } else {
-            value = "No Data";
-          }
-        }
-      } else {
-        if (field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
-          value = field.value_text.trim();
-        } else {
-          value = "No Data";
-        }
-      }
-    } else {
-      // Handle other field types
-      if (field.value_text?.trim()) {
-        value = field.value_text.trim();
-      } else if (typeof field.value === 'string' && field.value.trim()) {
-        value = field.value.trim();
-      } else if (typeof field.value === 'object' && field.value?.name) {
-        value = field.value.name;
-      } else if (field.value != null && field.value !== '' && field.value !== 0) {
-        value = String(field.value).trim();
-      } else {
-        value = "No Data";
-      }
-    }
+    let value = getFieldValue(field);
 
     if (value && value !== 'null' && value !== 'undefined') {
       counts[value] = (counts[value] || 0) + 1;
@@ -863,84 +871,14 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
     if (!task.custom_fields) continue;
     
     // Try to find the field with flexible name matching
-    let field = task.custom_fields.find(f => f.name && f.name.trim() === fieldName.trim());
+    let field = findFieldByName(task.custom_fields, fieldName);
     
-    // If not found, try field name mappings
-    if (!field && FIELD_NAME_MAPPINGS[fieldName]) {
-      field = task.custom_fields.find(f => 
-        f.name && FIELD_NAME_MAPPINGS[fieldName].some(mappedName => 
-          f.name.trim().toLowerCase() === mappedName.trim().toLowerCase()
-        )
-      );
-    }
-    
-    // If still not found, try partial matching
     if (!field) {
-      field = task.custom_fields.find(f => 
-        f.name && f.name.trim().toLowerCase().includes(fieldName.trim().toLowerCase())
-      );
+      console.log(`❌ Field "${fieldName}" not found in custom_fields for task: ${task.name}`);
+      continue;
     }
-    
-    if (!field) continue;
 
-    let value = null;
-
-    if (field.type === 'drop_down') {
-      // Handle ClickUp dropdown fields
-      if (field.type_config?.options) {
-        if (field.value !== null && field.value !== undefined && field.value !== 0) {
-          const options = field.type_config.options;
-          if (Array.isArray(options)) {
-            const option = options.find(opt => opt.id === field.value || opt.orderindex === field.value);
-            value = option?.name || null;
-          } else if (typeof options === 'object') {
-            const optionKey = Object.keys(options).find(key => 
-              options[key].id === field.value || 
-              key === String(field.value) ||
-              options[key].orderindex === field.value
-            );
-            value = optionKey ? options[optionKey].name : null;
-          }
-        }
-        
-        if (!value && field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
-          value = field.value_text.trim();
-        }
-        
-        if (!value && field.value === 0) {
-          const options = field.type_config.options;
-          if (Array.isArray(options) && options.length > 0) {
-            const zeroOption = options.find(opt => opt.orderindex === 0);
-            if (zeroOption) {
-              value = zeroOption.name;
-            } else {
-              value = options[0].name;
-            }
-          } else {
-            value = "No Data";
-          }
-        }
-      } else {
-        if (field.value_text && field.value_text.trim() !== '' && field.value_text.trim() !== 'N/A') {
-          value = field.value_text.trim();
-        } else {
-          value = "No Data";
-        }
-      }
-    } else {
-      // Handle other field types
-      if (field.value_text?.trim()) {
-        value = field.value_text.trim();
-      } else if (typeof field.value === 'string' && field.value.trim()) {
-        value = field.value.trim();
-      } else if (typeof field.value === 'object' && field.value?.name) {
-        value = field.value.name;
-      } else if (field.value != null && field.value !== '' && field.value !== 0) {
-        value = String(field.value).trim();
-      } else {
-        value = "No Data";
-      }
-    }
+    let value = getFieldValue(field);
 
     if (value && value !== 'null' && value !== 'undefined') {
       counts[value] = (counts[value] || 0) + 1;
