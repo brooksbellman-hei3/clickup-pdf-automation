@@ -1,6 +1,7 @@
 require("dotenv").config();
 const cron = require("node-cron");
 const sendReport = require("./sendEmail");
+const { sendScheduledDashboardEmail } = require("./sendDashboardEmail");
 
 console.log("⏰ ClickUp Report Scheduler started...");
 console.log(`🌍 Timezone: ${process.env.TIMEZONE || 'America/New_York'}`);
@@ -63,6 +64,50 @@ function startScheduler() {
   }, {
     timezone: process.env.TIMEZONE || "America/New_York"
   });
+
+  // NEW: Schedule dashboard emails (optional - can be enabled via environment variable)
+  if (process.env.ENABLE_DASHBOARD_EMAILS === 'true') {
+    const dashboardCronExpression = `0 ${sendHour} * * *`; // Same time as regular reports
+    
+    console.log(`📊 Scheduling daily dashboard emails at ${sendHour}:00`);
+    
+    cron.schedule(dashboardCronExpression, async () => {
+      console.log(`📤 Running scheduled dashboard email job at ${new Date().toLocaleString()}`);
+      try {
+        await sendScheduledDashboardEmail();
+        console.log("✅ Scheduled dashboard email sent successfully!");
+      } catch (error) {
+        console.error("❌ Scheduled dashboard email failed:", error.message);
+        console.error(error.stack);
+      }
+    }, {
+      timezone: process.env.TIMEZONE || "America/New_York"
+    });
+  } else {
+    console.log("📊 Dashboard emails disabled (set ENABLE_DASHBOARD_EMAILS=true to enable)");
+  }
+
+  // NEW: Schedule weekly dashboard emails (optional)
+  if (process.env.ENABLE_WEEKLY_DASHBOARD_EMAILS === 'true') {
+    const weeklyDashboardCronExpression = `0 9 * * 1`; // Every Monday at 9 AM
+    
+    console.log(`📊 Scheduling weekly dashboard emails on Mondays at 9:00 AM`);
+    
+    cron.schedule(weeklyDashboardCronExpression, async () => {
+      console.log(`📤 Running scheduled weekly dashboard email job at ${new Date().toLocaleString()}`);
+      try {
+        await sendScheduledDashboardEmail();
+        console.log("✅ Scheduled weekly dashboard email sent successfully!");
+      } catch (error) {
+        console.error("❌ Scheduled weekly dashboard email failed:", error.message);
+        console.error(error.stack);
+      }
+    }, {
+      timezone: process.env.TIMEZONE || "America/New_York"
+    });
+  } else {
+    console.log("📊 Weekly dashboard emails disabled (set ENABLE_WEEKLY_DASHBOARD_EMAILS=true to enable)");
+  }
 
   // 🚨 TESTING: Run once immediately on startup, then disable
   if (process.env.NODE_ENV !== 'production') {

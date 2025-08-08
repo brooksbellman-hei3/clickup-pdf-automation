@@ -477,10 +477,189 @@ async function fetchAllClickUpTasksFromTeam() {
   }
 }
 
+// Function to fetch data from the new executive dashboard list
+async function fetchExecutiveDashboardData(specificListId = null, skipDateFilter = false) {
+  const token = process.env.CLICKUP_API_TOKEN;
+  const teamId = process.env.CLICKUP_TEAM_ID;
+  const listId = specificListId || '901411784189'; // New executive dashboard list ID
+  const folderId = null;
+
+  if (!teamId || !token) {
+    console.error("❌ Missing ClickUp configuration: TEAM_ID or API_TOKEN");
+    return [];  
+  }
+
+  const headers = { 
+    'Authorization': token,
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    console.log(`🔗 Fetching executive dashboard data from list: ${listId}`);
+    
+    const url = `https://api.clickup.com/api/v2/list/${listId}/task`;
+    const allTasks = [];
+    let page = 0;
+    let hasMore = true;
+    
+    while (hasMore) {
+      try {
+        console.log(`📡 Fetching page ${page}... (${allTasks.length} tasks so far)`);
+        
+        const params = {
+          archived: false,
+          include_closed: true,
+          subtasks: true,
+          include_markdown_description: false,
+          page: page,
+          order_by: 'created',
+          reverse: false
+        };
+        
+        const response = await axios.get(url, {
+            headers,
+            params,
+            timeout: 60000,
+        });
+
+        const data = response.data;
+        const batch = data.tasks || [];
+
+        console.log(`📄 Retrieved ${batch.length} tasks on page ${page}`);
+        
+        if (batch.length === 0) {
+          hasMore = false;
+          break;
+        }
+        
+        allTasks.push(...batch);
+        
+        if (batch.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+      } catch (error) {
+        console.error(`❌ Error fetching page ${page}:`, error.message);
+        
+        if (error.response?.status === 429) {
+          console.log("⏳ Rate limited, waiting 10 seconds...");
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          continue;
+        }
+        
+        if (allTasks.length > 0) {
+          console.log(`⚠️ Error on page ${page}, but continuing with ${allTasks.length} tasks found so far`);
+          break;
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    console.log(`✅ Total executive dashboard tasks fetched: ${allTasks.length}`);
+
+    // Analyze the custom fields for the executive dashboard
+    console.log("\n🔍 ANALYZING EXECUTIVE DASHBOARD CUSTOM FIELDS:");
+    analyzeExecutiveDashboardFields(allTasks.slice(0, 5));
+
+    // Return all tasks without date filtering for dashboard
+    return allTasks;
+
+  } catch (error) {
+    console.error("❌ Error fetching executive dashboard data:");
+    if (error.response) {
+      console.error(`Status: ${error.response.status}`);
+      console.error(`Data: ${JSON.stringify(error.response.data)}`);
+    } else {
+      console.error(`Error: ${error.message}`);
+    }
+    return [];
+  }
+}
+
+// Helper function to analyze executive dashboard fields
+function analyzeExecutiveDashboardFields(tasks) {
+  const expectedFields = [
+    'Live Tracking Delivery',
+    'Scrubbed Delivery', 
+    'Replay Delivery',
+    'Operations P-Status',
+    'Software P-Status',
+    'Hardware P-Status',
+    'NBA SLA Delivery Time',
+    'Scrub SLA',
+    'Resend'
+  ];
+  
+  console.log("\n📊 EXPECTED FIELDS:", expectedFields);
+  
+  tasks.forEach((task, index) => {
+    console.log(`\n📋 Task ${index + 1}: "${task.name.substring(0, 50)}..."`);
+    
+    if (task.custom_fields && task.custom_fields.length > 0) {
+      console.log(`   Found ${task.custom_fields.length} custom fields:`);
+      
+      task.custom_fields.forEach(field => {
+        const isExpected = expectedFields.includes(field.name);
+        const status = isExpected ? "✅" : "❌";
+        console.log(`   ${status} "${field.name}" (${field.type})`);
+        
+        if (isExpected) {
+          console.log(`      Value: ${JSON.stringify(field.value)}`);
+          console.log(`      Value Text: "${field.value_text}"`);
+          
+          if (field.type_config?.options) {
+            console.log(`      Options: ${field.type_config.options.length} available`);
+          }
+        }
+      });
+    } else {
+      console.log(`   ❌ No custom fields found`);
+    }
+  });
+}
+
+// Function to filter tasks by custom date range
+function filterTasksByDateRange(tasks, startDate, endDate) {
+  console.log(`🔍 Filtering ${tasks.length} tasks by date range: ${startDate} to ${endDate}`);
+  
+  const start = new Date(startDate).getTime();
+  const end = new Date(endDate).getTime();
+  
+  const filteredTasks = tasks.filter(task => {
+    // Try multiple date fields
+    const dateFields = ['date_created', 'date_updated'];
+    let taskDate = null;
+    
+    for (const fieldName of dateFields) {
+      const timestamp = parseInt(task[fieldName]);
+      if (timestamp && !isNaN(timestamp)) {
+        // Ensure timestamp is in milliseconds
+        const msTimestamp = timestamp < 1000000000000 ? timestamp * 1000 : timestamp;
+        if (msTimestamp >= start && msTimestamp <= end) {
+          taskDate = msTimestamp;
+          break;
+        }
+      }
+    }
+    
+    return taskDate !== null;
+  });
+  
+  console.log(`✅ Found ${filteredTasks.length} tasks in date range`);
+  return filteredTasks;
+}
+
 module.exports = { 
   fetchClickUpTasks, 
   fetchAllTasksNoFilter,
   fetchAllClickUpTasksFromTeam,
   fetchTasksFromMultipleSources,
+  fetchExecutiveDashboardData,
+  filterTasksByDateRange,
   testClickUpConnection 
 };

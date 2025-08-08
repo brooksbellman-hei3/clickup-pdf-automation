@@ -1,0 +1,1013 @@
+const path = require("path");
+const sharp = require("sharp");
+
+// Try to load ChartJSNodeCanvas, fall back to Sharp-only if it fails
+let ChartJSNodeCanvas;
+try {
+  ChartJSNodeCanvas = require("chartjs-node-canvas").ChartJSNodeCanvas;
+  console.log("✅ ChartJSNodeCanvas loaded successfully");
+} catch (error) {
+  console.warn("⚠️ ChartJSNodeCanvas failed to load, using Sharp fallback:", error.message);
+  ChartJSNodeCanvas = null;
+}
+
+// Executive dashboard field configuration
+const EXECUTIVE_FIELDS = [
+  'Live Tracking Delivery',
+  'Scrubbed Delivery', 
+  'Replay Delivery',
+  'Operations P-Status',
+  'Software P-Status',
+  'Hardware P-Status',
+  'NBA SLA Delivery Time',
+  'Scrub SLA',
+  'Resend'
+];
+
+// Fields that should be displayed as number cards instead of charts
+// Note: These are still generated as charts but displayed as number cards in the header
+const NUMBER_CARD_FIELDS = [
+  'NBA SLA Delivery Time',
+  'Scrub SLA', 
+  'Resend'
+];
+
+// Field name mappings for common variations
+const FIELD_NAME_MAPPINGS = {
+  'Scrub SLA': ['Scrub SLA', 'Scrubbed SLA', 'Scrub SLA Delivery', 'Scrubbed SLA Delivery'],
+  'NBA SLA Delivery Time': ['NBA SLA Delivery Time', 'NBA SLA Delivery', 'NBA SLA Time'],
+  'Live Tracking Delivery': ['Live Tracking Delivery', 'Live Tracking', 'Live Delivery'],
+  'Replay Delivery': ['Replay Delivery', 'Replay', 'Replay Tracking'],
+  'Resend': ['Resend', 'Resend Required', 'Resend Flag']
+};
+
+// Color scheme for executive dashboard
+const EXECUTIVE_COLOR_SCHEME = {
+  // Priority levels (S1-S5, P1-P5) - including all variations
+  'S1': '#000000', 's1': '#000000', 'P1': '#000000', 'p1': '#000000',
+  'S1: Critical (I)': '#000000', 's1: critical (i)': '#000000',
+  'S1: Critical (E)': '#000000', 's1: critical (e)': '#000000',
+  'P1: Critical (I)': '#000000', 'p1: critical (i)': '#000000',
+  'P1: Critical (E)': '#000000', 'p1: critical (e)': '#000000',
+  'P1 - Critical ': '#000000', 'p1 - critical ': '#000000',
+  'P1 - Critical (I)': '#000000', 'p1 - critical (i)': '#000000',
+  'P1 - Critical (E)': '#000000', 'p1 - critical (e)': '#000000',
+  'P1 - Critical': '#000000', 'p1 - critical': '#000000',
+  'P1: Critical': '#000000', 'p1: critical': '#000000',
+  
+  'S2': '#dc3545', 's2': '#dc3545', 'P2': '#dc3545', 'p2': '#dc3545',
+  'S2: Critical (I)': '#dc3545', 's2: critical (i)': '#dc3545',
+  'S2: Critical (E)': '#dc3545', 's2: critical (e)': '#dc3545',
+  'S2: Major Issues (I)': '#dc3545', 's2: major issues (i)': '#dc3545',
+  'S2: Major Issues (E)': '#dc3545', 's2: major issues (e)': '#dc3545',
+  'P2: Critical (I)': '#dc3545', 'p2: critical (i)': '#dc3545',
+  'P2: Critical (E)': '#dc3545', 'p2: critical (e)': '#dc3545',
+  'P2: Major (I)': '#dc3545', 'p2: major (i)': '#dc3545',
+  'P2: Major (E)': '#dc3545', 'p2: major (e)': '#dc3545',
+  'P2 - Major ': '#dc3545', 'p2 - major ': '#dc3545',
+  'P2 - Major (I)': '#dc3545', 'p2 - major (i)': '#dc3545',
+  'P2 - Major (E)': '#dc3545', 'p2 - major (e)': '#dc3545',
+  'P2 - Major': '#dc3545', 'p2 - major': '#dc3545',
+  'P2: Major': '#dc3545', 'p2: major': '#dc3545',
+  
+  'S3': '#fd7e14', 's3': '#fd7e14', 'P3': '#fd7e14', 'p3': '#fd7e14',
+  'P3: Moderate (E)': '#fd7e14', 'p3: moderate (e)': '#fd7e14',
+  'P3: Moderate (I)': '#fd7e14', 'p3: moderate (i)': '#fd7e14',
+  'P3- Moderate (E)': '#fd7e14', 'p3- moderate (e)': '#fd7e14',
+  'P3 - Moderate (E)': '#fd7e14', 'p3 - moderate (e)': '#fd7e14',
+  'P3 - Moderate': '#fd7e14', 'p3 - moderate': '#fd7e14',
+  'P3: Moderate': '#fd7e14', 'p3: moderate': '#fd7e14',
+  
+  'S4': '#ffc107', 's4': '#ffc107', 'P4': '#ffc107', 'p4': '#ffc107',
+  'S4: Minor Issues (I)': '#ffc107', 's4: minor issues (i)': '#ffc107',
+  'S4: Minor Issues (E)': '#ffc107', 's4: minor issues (e)': '#ffc107',
+  'P4: Minor (I)': '#ffc107', 'p4: minor (i)': '#ffc107',
+  'P4: Minor (E)': '#ffc107', 'p4: minor (e)': '#ffc107',
+  'P4 - Minor (I)': '#ffc107', 'p4 - minor (i)': '#ffc107',
+  'P4 - Minor (E)': '#ffc107', 'p4 - minor (e)': '#ffc107',
+  'P4 - Minor ': '#ffc107', 'p4 - minor ': '#ffc107',
+  'P4 - Minor': '#ffc107', 'p4 - minor': '#ffc107',
+  'P4: Minor': '#ffc107', 'p4: minor': '#ffc107',
+  
+  'S5': '#28a745', 's5': '#28a745', 'P5': '#28a745', 'p5': '#28a745',
+  'S5: Good': '#28a745', 's5: good': '#28a745',
+  'P5: Good': '#28a745', 'p5: good': '#28a745',
+  'P5 - Good': '#28a745', 'p5 - good': '#28a745',
+  'P5: Good': '#28a745', 'p5: good': '#28a745',
+  
+  // SLA Status - including all variations
+  'Hit SLA': '#28a745', 'hit sla': '#28a745', 'HIT SLA': '#28a745',
+  'Missed: 1 Hour +': '#dc3545', 'missed: 1 hour +': '#dc3545', 'MISSED: 1 HOUR +': '#dc3545',
+  'Missed: 1 HOUR+': '#dc3545', 'missed: 1 hour+': '#dc3545', 'MISSED: 1 HOUR+': '#dc3545',
+  'Missed: ≤ 1Hour': '#dc3545', 'missed: ≤ 1hour': '#dc3545', 'MISSED: ≤ 1HOUR': '#dc3545',
+  'Missed: ≤ 1HOUR': '#dc3545', 'missed: ≤ 1hour': '#dc3545', 'MISSED: ≤ 1HOUR': '#dc3545',
+  'Missed: ≤ 15 MIN': '#ffc107', 'missed: ≤ 15 min': '#ffc107', 'MISSED: ≤ 15 MIN': '#ffc107',
+  'Missed: ≤15 MIN': '#ffc107', 'missed: ≤15 min': '#ffc107', 'MISSED: ≤15 MIN': '#ffc107',
+  'Missed: ≤15 MIN ': '#ffc107', 'missed: ≤15 min ': '#ffc107', 'MISSED: ≤15 MIN ': '#ffc107',
+  'Missed: ≤ 30 MIN': '#fd7e14', 'missed: ≤ 30 min': '#fd7e14', 'MISSED: ≤ 30 MIN': '#fd7e14',
+  'Missed: ≤30 MIN': '#fd7e14', 'missed: ≤30 min': '#fd7e14', 'MISSED: ≤30 MIN': '#fd7e14',
+  'Missed: ≤30 MIN ': '#fd7e14', 'missed: ≤30 min ': '#fd7e14', 'MISSED: ≤30 MIN ': '#fd7e14',
+  
+  // NBA Post Game
+  'NBA | Yes | < 30 Mins Post Game': '#28a745',
+  'nba | yes | < 30 mins post game': '#28a745',
+  'NBA | No | > 30 Mins Post Game': '#dc3545',
+  'nba | no | > 30 mins post game': '#dc3545',
+  
+  // Legacy colors for backward compatibility
+  'Green': '#28a745', 'green': '#28a745', 'GREEN': '#28a745',
+  'Yellow': '#ffc107', 'yellow': '#ffc107', 'YELLOW': '#ffc107',
+  'Red': '#dc3545', 'red': '#dc3545', 'RED': '#dc3545',
+  'Orange': '#fd7e14', 'orange': '#fd7e14', 'ORANGE': '#fd7e14',
+  'Black': '#000000', 'black': '#000000', 'BLACK': '#000000',
+  
+  // Success/Positive colors
+  'Success': '#28a745', 'success': '#28a745',
+  'Complete': '#28a745', 'complete': '#28a745',
+  'Delivered': '#28a745', 'delivered': '#28a745',
+  'On Time': '#28a745', 'on time': '#28a745',
+  
+  // Warning/Medium colors
+  'Warning': '#ffc107', 'warning': '#ffc107',
+  'Pending': '#ffc107', 'pending': '#ffc107',
+  'In Progress': '#ffc107', 'in progress': '#ffc107',
+  'Late': '#ffc107', 'late': '#ffc107',
+  'Partial': '#ffc107', 'partial': '#ffc107',
+  
+  // Error/Critical colors
+  'Error': '#dc3545', 'error': '#dc3545',
+  'Failed': '#dc3545', 'failed': '#dc3545',
+  'Critical': '#dc3545', 'critical': '#dc3545',
+  'Overdue': '#dc3545', 'overdue': '#dc3545',
+  
+  // Neutral colors
+  'Gray': '#6c757d', 'gray': '#6c757d', 'GRAY': '#6c757d',
+  'Grey': '#6c757d', 'grey': '#6c757d', 'GREY': '#6c757d',
+  'N/A': '#6c757d', 'n/a': '#6c757d', 'NA': '#6c757d',
+  'No Data': '#6c757d', 'Empty': '#6c757d',
+  'Unknown': '#6c757d', 'unknown': '#6c757d',
+  
+  // Info colors
+  'Blue': '#007bff', 'blue': '#007bff', 'BLUE': '#007bff',
+  'Info': '#007bff', 'info': '#007bff',
+  'Processing': '#007bff', 'processing': '#007bff',
+  'In Queue': '#007bff', 'in queue': '#007bff',
+  
+  // Default fallback
+  'default': '#6c757d'
+};
+
+async function generateExecutiveDashboardCharts(tasks, dateRange = null, specificDate = null) {
+  console.log(`🎨 Generating executive dashboard charts for ${tasks.length} tasks`);
+  if (dateRange) {
+    console.log(`📅 Date range: ${dateRange.start} to ${dateRange.end}`);
+  }
+  if (specificDate) {
+    console.log(`📅 Specific date filter: ${specificDate}`);
+  }
+  
+  const charts = [];
+  
+  // Generate charts for each executive field
+  for (let i = 0; i < EXECUTIVE_FIELDS.length; i++) {
+    const fieldName = EXECUTIVE_FIELDS[i];
+    
+    // Note: Number card fields are still generated as charts but also displayed as number cards in header
+    console.log(`📊 Processing field: ${fieldName} (${NUMBER_CARD_FIELDS.includes(fieldName) ? 'number card field' : 'chart field'})`);
+    
+    let chartTitle = fieldName;
+    
+    if (specificDate) {
+      chartTitle = `${fieldName} (${specificDate})`;
+    } else if (dateRange) {
+      chartTitle = `${fieldName} (${dateRange.start} to ${dateRange.end})`;
+    }
+    
+    console.log(`\n📊 Generating chart ${i + 1}/${EXECUTIVE_FIELDS.length}: ${fieldName}`);
+    
+    try {
+      const chart = await generateExecutiveFieldChart(tasks, fieldName, chartTitle, i);
+      if (chart) {
+        charts.push(chart);
+        console.log(`✅ Chart generated: ${chart.filePath}`);
+      } else {
+        console.warn(`⚠️ Failed to generate chart for ${fieldName}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error generating chart for ${fieldName}:`, error.message);
+    }
+  }
+  
+  console.log(`\n📈 Total executive charts generated: ${charts.length}`);
+  return charts;
+}
+
+// NEW: Function to generate all-time charts (Row 1)
+async function generateAllTimeCharts(tasks) {
+  console.log(`📊 Generating all-time charts for ${tasks.length} tasks`);
+  return await generateExecutiveDashboardCharts(tasks, null, null);
+}
+
+// NEW: Function to generate specific date charts (Row 2)
+async function generateSpecificDateCharts(tasks, specificDate) {
+  console.log(`📊 Generating specific date charts for ${specificDate}`);
+  
+  // Filter tasks by Event Date matching the specific date
+  const filteredTasks = filterTasksByEventDate(tasks, specificDate);
+  console.log(`📅 Found ${filteredTasks.length} tasks for date: ${specificDate}`);
+  
+  return await generateExecutiveDashboardCharts(filteredTasks, null, specificDate);
+}
+
+// NEW: Function to filter tasks by Event Date
+function filterTasksByEventDate(tasks, targetDate) {
+  console.log(`🔍 Filtering tasks by Event Date: ${targetDate}`);
+  
+  const targetTimestamp = new Date(targetDate).getTime();
+  const dayStart = new Date(targetDate).setHours(0, 0, 0, 0);
+  const dayEnd = new Date(targetDate).setHours(23, 59, 59, 999);
+  
+  console.log(`📅 Looking for tasks between: ${new Date(dayStart).toISOString()} and ${new Date(dayEnd).toISOString()}`);
+  
+  return tasks.filter(task => {
+    if (!task.custom_fields) return false;
+    
+    // Try multiple possible field names for Event Date
+    const eventDateField = task.custom_fields.find(f => 
+      f.name === 'Event Date' || 
+      f.name === 'event date' || 
+      f.name === 'EVENT DATE' ||
+      f.name === 'Date' ||
+      f.name === 'date' ||
+      f.name === 'DATE'
+    );
+    
+    if (!eventDateField) {
+      console.log(`❌ No Event Date field found for task: ${task.name}`);
+      return false;
+    }
+    
+    console.log(`📋 Task: "${task.name}" - Event Date field: ${eventDateField.name}, Value: ${JSON.stringify(eventDateField.value)}`);
+    
+    let taskTimestamp;
+    
+    // Handle different timestamp formats
+    if (typeof eventDateField.value === 'number') {
+      taskTimestamp = eventDateField.value < 1000000000000 ? eventDateField.value * 1000 : eventDateField.value;
+    } else if (typeof eventDateField.value === 'string') {
+      // Remove quotes if present and parse as number
+      const cleanValue = eventDateField.value.replace(/"/g, '');
+      const parsedValue = parseInt(cleanValue);
+      if (!isNaN(parsedValue)) {
+        taskTimestamp = parsedValue < 1000000000000 ? parsedValue * 1000 : parsedValue;
+      } else {
+        // Try parsing as date string
+        taskTimestamp = new Date(eventDateField.value).getTime();
+      }
+    } else if (eventDateField.value && eventDateField.value.date) {
+      taskTimestamp = eventDateField.value.date < 1000000000000 ? eventDateField.value.date * 1000 : eventDateField.value.date;
+    } else if (eventDateField.value && typeof eventDateField.value === 'object') {
+      // Try to extract timestamp from object
+      const rawValue = eventDateField.value.value || eventDateField.value.date || eventDateField.value;
+      if (typeof rawValue === 'number') {
+        taskTimestamp = rawValue < 1000000000000 ? rawValue * 1000 : rawValue;
+      } else if (typeof rawValue === 'string') {
+        // Remove quotes if present and parse as number
+        const cleanValue = rawValue.replace(/"/g, '');
+        const parsedValue = parseInt(cleanValue);
+        if (!isNaN(parsedValue)) {
+          taskTimestamp = parsedValue < 1000000000000 ? parsedValue * 1000 : parsedValue;
+        } else {
+          // Try parsing as date string
+          taskTimestamp = new Date(rawValue).getTime();
+        }
+      } else {
+        console.log(`❌ Could not parse Event Date value: ${JSON.stringify(eventDateField.value)}`);
+        return false;
+      }
+    } else {
+      console.log(`❌ No valid Event Date value found: ${JSON.stringify(eventDateField.value)}`);
+      return false;
+    }
+    
+    // Validate timestamp before creating Date object
+    if (isNaN(taskTimestamp) || taskTimestamp <= 0) {
+      console.log(`❌ Invalid timestamp for task "${task.name}": ${taskTimestamp}`);
+      return false;
+    }
+    
+    // Convert to Date object for comparison
+    const taskDate = new Date(taskTimestamp);
+    
+    // Validate the date object
+    if (isNaN(taskDate.getTime())) {
+      console.log(`❌ Invalid date for task "${task.name}": ${taskDate}`);
+      return false;
+    }
+    
+    const isInRange = taskTimestamp >= dayStart && taskTimestamp <= dayEnd;
+    console.log(`📅 Task timestamp: ${taskDate.toISOString()}, In range: ${isInRange}`);
+    
+    return isInRange;
+  });
+}
+
+// NEW: Function to generate both rows of charts (18 total)
+async function generateCompleteDashboardCharts(tasks, specificDate = null) {
+  console.log(`🎨 Generating complete dashboard with 18 charts`);
+  
+  const allCharts = [];
+  
+  // Row 1: All-time charts (9 charts)
+  console.log(`\n📊 Row 1: Generating all-time charts...`);
+  const allTimeCharts = await generateAllTimeCharts(tasks);
+  allCharts.push(...allTimeCharts);
+  
+  // Row 2: Specific date charts (9 charts)
+  if (specificDate) {
+    console.log(`\n📊 Row 2: Generating specific date charts for ${specificDate}...`);
+    const specificDateCharts = await generateSpecificDateCharts(tasks, specificDate);
+    allCharts.push(...specificDateCharts);
+  } else {
+    console.log(`\n📊 Row 2: No specific date provided, skipping date-specific charts`);
+  }
+  
+  // Calculate dashboard statistics
+  const stats = calculateDashboardStats(tasks, specificDate);
+  
+  console.log(`\n📈 Total charts generated: ${allCharts.length}`);
+  return {
+    charts: allCharts,
+    stats: stats
+  };
+}
+
+// Calculate dashboard statistics for the new header
+function calculateDashboardStats(tasks, specificDate = null) {
+  console.log('📊 Calculating dashboard statistics...');
+  
+  const stats = {};
+  
+  // Total games count
+  stats.totalGames = tasks.length;
+  console.log(`📊 Total games count: ${stats.totalGames}`);
+  
+  // Calculate delivery percentages
+  const liveTrackingField = tasks[0]?.custom_fields?.find(f => 
+    f.name === 'Live Tracking Delivery' || f.name === 'live tracking delivery'
+  );
+  const replayField = tasks[0]?.custom_fields?.find(f => 
+    f.name === 'Replay Delivery' || f.name === 'replay delivery'
+  );
+  
+  if (liveTrackingField) {
+    const liveTrackingValues = tasks.map(task => {
+      const field = task.custom_fields?.find(f => 
+        f.name === 'Live Tracking Delivery' || f.name === 'live tracking delivery'
+      );
+      return field?.value || field?.value?.value || field?.value_text || 'Unknown';
+    }).filter(v => v !== 'Unknown');
+    
+    const deliveredCount = liveTrackingValues.filter(v => {
+      const valueStr = String(v).toLowerCase();
+      return valueStr === 's5: good' || 
+             valueStr === 's4: minor issues (i)' || 
+             valueStr === 's4: minor issues (e)' ||
+             valueStr === 's5 - good' || 
+             valueStr === 's4 - minor issues (i)' || 
+             valueStr === 's4 - minor issues (e)';
+    }).length;
+    
+    stats.liveTrackingDelivery = liveTrackingValues.length > 0 ? Math.round((deliveredCount / liveTrackingValues.length) * 100) : 0;
+    console.log(`📊 Live Tracking Delivery: ${deliveredCount}/${liveTrackingValues.length} = ${stats.liveTrackingDelivery}%`);
+  } else {
+    console.log(`⚠️ Live Tracking Delivery field not found`);
+    stats.liveTrackingDelivery = 0;
+  }
+  
+  if (replayField) {
+    const replayValues = tasks.map(task => {
+      const field = task.custom_fields?.find(f => 
+        f.name === 'Replay Delivery' || f.name === 'replay delivery'
+      );
+      return field?.value || field?.value?.value || field?.value_text || 'Unknown';
+    }).filter(v => v !== 'Unknown');
+    
+    const deliveredCount = replayValues.filter(v => {
+      const valueStr = String(v).toLowerCase();
+      return valueStr === 's5: good' || 
+             valueStr === 's4: minor issues (i)' || 
+             valueStr === 's4: minor issues (e)' ||
+             valueStr === 's5 - good' || 
+             valueStr === 's4 - minor issues (i)' || 
+             valueStr === 's4 - minor issues (e)';
+    }).length;
+    
+    stats.replayDelivery = replayValues.length > 0 ? Math.round((deliveredCount / replayValues.length) * 100) : 0;
+    console.log(`📊 Replay Delivery: ${deliveredCount}/${replayValues.length} = ${stats.replayDelivery}%`);
+  } else {
+    console.log(`⚠️ Replay Delivery field not found`);
+    stats.replayDelivery = 0;
+  }
+  
+  // Calculate SLA hit percentage (only NBA SLA Delivery Time)
+  let totalSLAs = 0;
+  let hitSLAs = 0;
+  
+  tasks.forEach(task => {
+    const field = task.custom_fields?.find(f => 
+      f.name === 'NBA SLA Delivery Time' || f.name === 'nba sla delivery time'
+    );
+    if (field) {
+      totalSLAs++;
+      const value = field.value || field.value?.value || field.value_text || '';
+      const valueStr = String(value).toLowerCase();
+      if (valueStr === 'hit sla') {
+        hitSLAs++;
+      }
+    }
+  });
+  
+  stats.slaHitPercentage = totalSLAs > 0 ? Math.round((hitSLAs / totalSLAs) * 100) : 0;
+  console.log(`📊 SLA Hit Percentage: ${hitSLAs}/${totalSLAs} = ${stats.slaHitPercentage}%`);
+  
+  // Calculate resend percentage
+  const resendField = tasks[0]?.custom_fields?.find(f => 
+    f.name === 'Resend' || f.name === 'resend'
+  );
+  
+  if (resendField) {
+    const resendValues = tasks.map(task => {
+      const field = task.custom_fields?.find(f => 
+        f.name === 'Resend' || f.name === 'resend'
+      );
+      return field?.value || field?.value?.value || field?.value_text || 'No';
+    }).filter(v => v !== 'No');
+    
+    const resendCount = resendValues.filter(v => {
+      const valueStr = String(v).toLowerCase();
+      return valueStr === 'yes';
+    }).length;
+    
+    stats.resendPercentage = resendValues.length > 0 ? Math.round((resendCount / resendValues.length) * 100) : 0;
+    console.log(`📊 Resend Percentage: ${resendCount}/${resendValues.length} = ${stats.resendPercentage}%`);
+  } else {
+    console.log(`⚠️ Resend field not found`);
+    stats.resendPercentage = 0;
+  }
+  
+  // Calculate last night's stats if specific date provided
+  if (specificDate) {
+    const yesterdayTasks = filterTasksByEventDate(tasks, specificDate);
+    stats.lastNightGames = yesterdayTasks.length;
+    console.log(`📊 Last Night Games: ${stats.lastNightGames} for date ${specificDate}`);
+    
+    // Last night's SLA stats (only NBA SLA Delivery Time)
+    let lastNightHitSLAs = 0;
+    let lastNightMissedSLAs = 0;
+    
+    yesterdayTasks.forEach(task => {
+      const field = task.custom_fields?.find(f => 
+        f.name === 'NBA SLA Delivery Time' || f.name === 'nba sla delivery time'
+      );
+      if (field) {
+        const value = field.value || field.value?.value || field.value_text || '';
+        const valueStr = String(value).toLowerCase();
+        if (valueStr === 'hit sla') {
+          lastNightHitSLAs++;
+        } else {
+          lastNightMissedSLAs++;
+        }
+      }
+    });
+    
+    stats.lastNightSLAsHit = lastNightHitSLAs;
+    stats.lastNightSLAsMissed = lastNightMissedSLAs;
+    console.log(`📊 Last Night SLAs: ${lastNightHitSLAs} hit, ${stats.lastNightSLAsMissed} missed (total: ${lastNightHitSLAs + lastNightMissedSLAs})`);
+    
+    // Last night's resend count
+    const lastNightResendValues = yesterdayTasks.map(task => {
+      const field = task.custom_fields?.find(f => 
+        f.name === 'Resend' || f.name === 'resend'
+      );
+      return field?.value || field?.value?.value || field?.value_text || 'No';
+    });
+    
+    const lastNightResendCount = lastNightResendValues.filter(v => {
+      const valueStr = String(v).toLowerCase();
+      return valueStr === 'yes';
+    }).length;
+    
+    stats.lastNightResends = lastNightResendCount;
+    console.log(`📊 Last Night Resends: ${lastNightResendCount}`);
+  } else {
+    console.log(`📊 No specific date provided, skipping last night's stats`);
+  }
+  
+  console.log('📊 Dashboard stats calculated:', stats);
+  return stats;
+}
+
+async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
+  console.log(`🔍 Processing field: "${fieldName}"`);
+
+  if (!tasks || tasks.length === 0) {
+    console.warn(`⚠️ No tasks provided for chart generation`);
+    return null;
+  }
+
+  // Check if this field should be a number count chart
+  const isNumberCountField = NUMBER_CARD_FIELDS.includes(fieldName);
+  
+  if (isNumberCountField) {
+    console.log(`📊 Generating number count chart for "${fieldName}"`);
+    return await generateNumberCountChart(tasks, fieldName, title, index);
+  }
+
+  const counts = {};
+  let processedTasks = 0;
+
+  console.log(`🔍 Processing ${tasks.length} tasks for field "${fieldName}"`);
+
+  for (const task of tasks) {
+    if (!task.custom_fields) continue;
+    
+    // Try to find the field with flexible name matching
+    let field = task.custom_fields.find(f => f.name && f.name.trim() === fieldName.trim());
+    
+    // If not found, try field name mappings
+    if (!field && FIELD_NAME_MAPPINGS[fieldName]) {
+      field = task.custom_fields.find(f => 
+        f.name && FIELD_NAME_MAPPINGS[fieldName].some(mappedName => 
+          f.name.trim().toLowerCase() === mappedName.trim().toLowerCase()
+        )
+      );
+    }
+    
+    // If still not found, try partial matching
+    if (!field) {
+      field = task.custom_fields.find(f => 
+        f.name && f.name.trim().toLowerCase().includes(fieldName.trim().toLowerCase())
+      );
+    }
+    
+    if (!field) continue;
+
+    let value = null;
+
+    if (field.type === 'drop_down') {
+      // Handle ClickUp dropdown fields
+      if (field.type_config?.options) {
+        // Try different ways to get the dropdown value
+        if (field.value !== null && field.value !== undefined && field.value !== 0) {
+          const options = field.type_config.options;
+          if (Array.isArray(options)) {
+            const option = options.find(opt => opt.id === field.value || opt.orderindex === field.value);
+            value = option?.name || null;
+          } else if (typeof options === 'object') {
+            const optionKey = Object.keys(options).find(key => 
+              options[key].id === field.value || 
+              key === String(field.value) ||
+              options[key].orderindex === field.value
+            );
+            value = optionKey ? options[optionKey].name : null;
+          }
+        }
+        
+        // If we still don't have a value, check value_text
+        if (!value && field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
+          value = field.value_text.trim();
+        }
+        
+        // Handle the case where value is 0
+        if (!value && field.value === 0) {
+          const options = field.type_config.options;
+          if (Array.isArray(options) && options.length > 0) {
+            const zeroOption = options.find(opt => opt.orderindex === 0);
+            if (zeroOption) {
+              value = zeroOption.name;
+            } else {
+              value = options[0].name;
+            }
+          } else {
+            value = "No Data";
+          }
+        }
+      } else {
+        if (field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
+          value = field.value_text.trim();
+        } else {
+          value = "No Data";
+        }
+      }
+    } else {
+      // Handle other field types
+      if (field.value_text?.trim()) {
+        value = field.value_text.trim();
+      } else if (typeof field.value === 'string' && field.value.trim()) {
+        value = field.value.trim();
+      } else if (typeof field.value === 'object' && field.value?.name) {
+        value = field.value.name;
+      } else if (field.value != null && field.value !== '' && field.value !== 0) {
+        value = String(field.value).trim();
+      } else {
+        value = "No Data";
+      }
+    }
+
+    if (value && value !== 'null' && value !== 'undefined') {
+      counts[value] = (counts[value] || 0) + 1;
+      processedTasks++;
+    }
+  }
+
+  console.log(`📊 Final counts for "${fieldName}":`, counts);
+  console.log(`📈 Processed ${processedTasks} tasks with data`);
+
+  if (processedTasks === 0 || Object.keys(counts).length === 0) {
+    console.warn(`⚠️ No valid data found for "${fieldName}"`);
+    return null;
+  }
+
+  const labels = Object.keys(counts);
+  const data = labels.map(l => counts[l]);
+  
+  // Special handling for Resend field - inverted Yes/No colors
+  let colors;
+  if (fieldName === 'Resend') {
+    colors = labels.map(label => {
+      if (label.toLowerCase() === 'yes') return '#dc3545'; // Red for Yes
+      if (label.toLowerCase() === 'no') return '#28a745';  // Green for No
+      return EXECUTIVE_COLOR_SCHEME[label] || EXECUTIVE_COLOR_SCHEME['default'];
+    });
+  } else {
+    colors = labels.map(label => EXECUTIVE_COLOR_SCHEME[label] || EXECUTIVE_COLOR_SCHEME['default']);
+  }
+
+  console.log(`📈 Final chart data:`);
+  console.log(`   Labels: [${labels.join(', ')}]`);
+  console.log(`   Data: [${data.join(', ')}]`);
+  console.log(`   Colors: [${colors.join(', ')}]`);
+
+  return await generatePieChart(title, labels, data, colors, index);
+}
+
+async function generatePieChart(title, labels, data, colors, index) {
+  const width = 600;
+  const height = 400;
+
+  console.log(`🎨 Creating chart: ${title}`);
+  console.log(`   Labels: ${labels.join(', ')}`);
+  console.log(`   Data: ${data.join(', ')}`);
+
+  // Try ChartJS first, fall back to Sharp if it fails
+  if (ChartJSNodeCanvas) {
+    try {
+      return await generateChartJSChart(title, labels, data, colors, index, width, height);
+    } catch (error) {
+      console.warn(`⚠️ ChartJS failed for "${title}", falling back to Sharp:`, error.message);
+    }
+  }
+  
+  // Fallback to Sharp-based chart
+  return await generateSharpChart(title, labels, data, colors, index, width, height);
+}
+
+async function generateChartJSChart(title, labels, data, colors, index, width, height) {
+  const chartJSNodeCanvas = new ChartJSNodeCanvas({
+    width,
+    height,
+    backgroundColour: "white",
+    devicePixelRatio: 1,
+    chartCallback: (ChartJS) => {
+      ChartJS.defaults.font = ChartJS.defaults.font || {};
+      ChartJS.defaults.font.family = 'Arial, sans-serif';
+      ChartJS.defaults.font.size = 12;
+    }
+  });
+
+  const configuration = {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          data,
+          backgroundColor: colors,
+          borderColor: "#ffffff",
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      plugins: {
+        title: {
+          display: true,
+          text: title,
+          font: { size: 16, weight: 'bold' },
+          color: '#000000',
+          padding: 15
+        },
+        legend: {
+          display: true,
+          position: "right",
+          labels: {
+            font: { size: 12 },
+            color: "#000000",
+            usePointStyle: true,
+            padding: 10
+          },
+        },
+      },
+      layout: {
+        padding: {
+          top: 15,
+          bottom: 15,
+          left: 15,
+          right: 15
+        }
+      }
+    },
+  };
+
+  console.log(`   Rendering ChartJS buffer...`);
+  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, "image/png");
+  
+  if (!buffer || buffer.length === 0) {
+    throw new Error("ChartJS buffer is empty");
+  }
+  
+  console.log(`   ChartJS buffer size: ${buffer.length} bytes`);
+  return await processChartBuffer(buffer, title, index);
+}
+
+async function generateSharpChart(title, labels, data, colors, index, width, height) {
+  console.log(`   Generating Sharp fallback chart...`);
+  
+  const total = data.reduce((sum, val) => sum + val, 0);
+  const labelHeight = 20;
+  const chartCenterX = width * 0.35;
+  const chartCenterY = height * 0.5;
+  const radius = Math.min(width * 0.2, height * 0.2);
+  
+  let currentAngle = -Math.PI / 2;
+  const slices = data.map((value, i) => {
+    const percentage = (value / total) * 100;
+    const sliceAngle = (value / total) * 2 * Math.PI;
+    
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + sliceAngle;
+    
+    const startX = chartCenterX + Math.cos(startAngle) * radius;
+    const startY = chartCenterY + Math.sin(startAngle) * radius;
+    const endX = chartCenterX + Math.cos(endAngle) * radius;
+    const endY = chartCenterY + Math.sin(endAngle) * radius;
+    
+    const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
+    
+    const pathData = [
+      `M ${chartCenterX} ${chartCenterY}`,
+      `L ${startX} ${startY}`,
+      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+      `Z`
+    ].join(' ');
+    
+    currentAngle = endAngle;
+    
+    return {
+      path: pathData,
+      color: colors[i] || '#666',
+      label: labels[i],
+      value: value,
+      percentage: percentage.toFixed(1)
+    };
+  });
+  
+  const legendX = width * 0.6;
+  const legendStartY = height * 0.25;
+  
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>
+          .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }
+          .legend-text { font-family: Arial, sans-serif; font-size: 12px; fill: #000; }
+          .legend-value { font-family: Arial, sans-serif; font-size: 10px; fill: #666; }
+        </style>
+      </defs>
+      
+      <rect width="100%" height="100%" fill="white"/>
+      
+      <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
+      
+      ${slices.map(slice => `
+        <path d="${slice.path}" fill="${slice.color}" stroke="white" stroke-width="2"/>
+      `).join('')}
+      
+      ${slices.map((slice, i) => `
+        <rect x="${legendX}" y="${legendStartY + i * labelHeight}" width="12" height="12" fill="${slice.color}"/>
+        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 9}" class="legend-text">${slice.label}</text>
+        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 9 + 12}" class="legend-value">${slice.value} (${slice.percentage}%)</text>
+      `).join('')}
+    </svg>
+  `;
+  
+  console.log(`   Generating Sharp PNG from SVG...`);
+  const buffer = await sharp(Buffer.from(svg))
+    .png({
+      quality: 90,
+      compressionLevel: 6
+    })
+    .toBuffer();
+    
+  console.log(`   Sharp buffer size: ${buffer.length} bytes`);
+  return await processChartBuffer(buffer, title, index);
+}
+
+async function processChartBuffer(buffer, title, index) {
+  const timestamp = Date.now();
+  const filename = `executive_chart_${index}_${timestamp}.png`;
+  const filePath = path.join(__dirname, filename);
+
+  console.log(`   Processing final image...`);
+  
+  await sharp(buffer)
+    .flatten({ background: "#ffffff" })
+    .png({
+      quality: 90,
+      compressionLevel: 6,
+      force: true
+    })
+    .toFile(filePath);
+
+  console.log(`✅ Executive chart saved: ${filePath}`);
+  
+  return {
+    filePath,
+    base64Chart: buffer.toString("base64"),
+    filename: filename,
+    title: title
+  };
+}
+
+// Generate number count chart for specific fields
+async function generateNumberCountChart(tasks, fieldName, title, index) {
+  console.log(`🔍 Generating number count chart for "${fieldName}"`);
+
+  const counts = {};
+  let processedTasks = 0;
+
+  for (const task of tasks) {
+    if (!task.custom_fields) continue;
+    
+    // Try to find the field with flexible name matching
+    let field = task.custom_fields.find(f => f.name && f.name.trim() === fieldName.trim());
+    
+    // If not found, try field name mappings
+    if (!field && FIELD_NAME_MAPPINGS[fieldName]) {
+      field = task.custom_fields.find(f => 
+        f.name && FIELD_NAME_MAPPINGS[fieldName].some(mappedName => 
+          f.name.trim().toLowerCase() === mappedName.trim().toLowerCase()
+        )
+      );
+    }
+    
+    // If still not found, try partial matching
+    if (!field) {
+      field = task.custom_fields.find(f => 
+        f.name && f.name.trim().toLowerCase().includes(fieldName.trim().toLowerCase())
+      );
+    }
+    
+    if (!field) continue;
+
+    let value = null;
+
+    if (field.type === 'drop_down') {
+      // Handle ClickUp dropdown fields
+      if (field.type_config?.options) {
+        if (field.value !== null && field.value !== undefined && field.value !== 0) {
+          const options = field.type_config.options;
+          if (Array.isArray(options)) {
+            const option = options.find(opt => opt.id === field.value || opt.orderindex === field.value);
+            value = option?.name || null;
+          } else if (typeof options === 'object') {
+            const optionKey = Object.keys(options).find(key => 
+              options[key].id === field.value || 
+              key === String(field.value) ||
+              options[key].orderindex === field.value
+            );
+            value = optionKey ? options[optionKey].name : null;
+          }
+        }
+        
+        if (!value && field.value_text && field.value_text.trim() !== '' && field.value_text !== 'N/A') {
+          value = field.value_text.trim();
+        }
+        
+        if (!value && field.value === 0) {
+          const options = field.type_config.options;
+          if (Array.isArray(options) && options.length > 0) {
+            const zeroOption = options.find(opt => opt.orderindex === 0);
+            if (zeroOption) {
+              value = zeroOption.name;
+            } else {
+              value = options[0].name;
+            }
+          } else {
+            value = "No Data";
+          }
+        }
+      } else {
+        if (field.value_text && field.value_text.trim() !== '' && field.value_text.trim() !== 'N/A') {
+          value = field.value_text.trim();
+        } else {
+          value = "No Data";
+        }
+      }
+    } else {
+      // Handle other field types
+      if (field.value_text?.trim()) {
+        value = field.value_text.trim();
+      } else if (typeof field.value === 'string' && field.value.trim()) {
+        value = field.value.trim();
+      } else if (typeof field.value === 'object' && field.value?.name) {
+        value = field.value.name;
+      } else if (field.value != null && field.value !== '' && field.value !== 0) {
+        value = String(field.value).trim();
+      } else {
+        value = "No Data";
+      }
+    }
+
+    if (value && value !== 'null' && value !== 'undefined') {
+      counts[value] = (counts[value] || 0) + 1;
+      processedTasks++;
+    }
+  }
+
+  console.log(`📊 Number count chart data for "${fieldName}":`, counts);
+
+  if (processedTasks === 0 || Object.keys(counts).length === 0) {
+    console.warn(`⚠️ No valid data found for "${fieldName}"`);
+    return null;
+  }
+
+  // Create a simple text-based chart showing counts
+  const width = 400;
+  const height = 300;
+  const padding = 20;
+  
+  const chartData = Object.entries(counts).map(([label, count]) => ({
+    label,
+    count,
+    color: EXECUTIVE_COLOR_SCHEME[label] || '#666'
+  }));
+
+  // Create SVG for number count display
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <style>
+          .title { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #000; }
+          .count-label { font-family: Arial, sans-serif; font-size: 14px; fill: #333; }
+          .count-value { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }
+        </style>
+      </defs>
+      
+      <rect width="100%" height="100%" fill="white"/>
+      
+      <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
+      
+      ${chartData.map((item, i) => `
+        <rect x="${padding}" y="${60 + i * 50}" width="20" height="20" fill="${item.color}"/>
+        <text x="${padding + 30}" y="${75 + i * 50}" class="count-label">${item.label}:</text>
+        <text x="${width - padding}" y="${75 + i * 50}" text-anchor="end" class="count-value">${item.count}</text>
+      `).join('')}
+    </svg>
+  `;
+
+  console.log(`   Generating Sharp PNG from SVG...`);
+  const buffer = await sharp(Buffer.from(svg))
+    .png({
+      quality: 90,
+      compressionLevel: 6
+    })
+    .toBuffer();
+    
+  console.log(`   Sharp buffer size: ${buffer.length} bytes`);
+  return await processChartBuffer(buffer, title, index);
+}
+
+module.exports = {
+  generateExecutiveDashboardCharts,
+  generateAllTimeCharts,
+  generateSpecificDateCharts,
+  generateCompleteDashboardCharts,
+  filterTasksByEventDate,
+  calculateDashboardStats,
+  EXECUTIVE_FIELDS,
+  EXECUTIVE_COLOR_SCHEME
+};

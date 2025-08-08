@@ -1,7 +1,7 @@
 # ClickUp API Configuration
 # Get your API token from: https://app.clickup.com/settings/apps
 CLICKUP_API_TOKEN=pk_your_actual_token_here
-CLICKUP_LIST_ID=901402855517
+CLICKUP_LIST_ID=901411784189
 CLICKUP_TEAM_ID=your_team_id_here
 
 # Email Configuration (Gmail SMTP)
@@ -28,3 +28,11 @@ PORT=10000
 
 # Optional: Logging level (error, warn, info, debug)
 LOG_LEVEL=info
+
+# Executive Dashboard Configuration
+# Set to 'true' to enable automatic dashboard emails
+ENABLE_DASHBOARD_EMAILS=false
+# Set to 'true' to enable weekly dashboard emails (Mondays at 9 AM)
+ENABLE_WEEKLY_DASHBOARD_EMAILS=false
+# Dashboard URL (will be auto-detected if not set)
+DASHBOARD_URL=https://gleaguereporttest.onrender.com/dashboard
