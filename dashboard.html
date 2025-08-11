@@ -435,9 +435,15 @@
                 }
                 
                 const data = await response.json();
-                // Show only the specific date charts (second row)
-                // The first 5 charts are all-time, the next 5 are specific date
-                const specificDateCharts = data.charts.slice(5);
+                
+                // Filter charts to show only specific date charts (those with date in title)
+                const specificDateCharts = data.charts.filter(chart => 
+                    chart.title.includes(`(${specificDate})`)
+                );
+                
+                console.log(`Found ${specificDateCharts.length} specific date charts for ${specificDate}`);
+                console.log('Specific date chart titles:', specificDateCharts.map(c => c.title));
+                
                 displayCharts(container, specificDateCharts, data.stats, data.numberCardStats);
                 
                 // Update last night's games counter
@@ -638,7 +644,7 @@
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
             loadAllTimeCharts();
-            setYesterdayDate(); // Set yesterday's date as default
+            // setYesterdayDate() will be called by window.onload
         });
     </script>
 </body>

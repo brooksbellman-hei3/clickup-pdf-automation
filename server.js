@@ -5,7 +5,7 @@ const sendReport = require('./sendEmail');
 const { generateTestChart } = require('./generateCharts');
 const { testClickUpConnection } = require('./fetchData');
 const { fetchExecutiveDashboardData, filterTasksByDateRange } = require('./fetchData');
-const { generateExecutiveDashboardCharts, generateCompleteDashboardCharts } = require('./generateDashboardCharts');
+const { generateExecutiveDashboardCharts, generateCompleteDashboardCharts, calculateDashboardStats, generateNumberCardStats } = require('./generateDashboardCharts');
 const { sendDashboardEmail } = require('./sendDashboardEmail');
 
 const app = express();
@@ -323,20 +323,16 @@ app.get('/api/dashboard/all-time', async (req, res) => {
     
     const charts = await generateExecutiveDashboardCharts(tasks);
     
-    // Calculate stats
-    const totalTasks = tasks.length;
-    const processedTasks = tasks.filter(task => task.custom_fields && task.custom_fields.length > 0).length;
-    const successRate = totalTasks > 0 ? Math.round((processedTasks / totalTasks) * 100) : 0;
+    // Calculate proper stats using the dashboard stats function
+    const stats = calculateDashboardStats(tasks);
+    const numberCardStats = generateNumberCardStats(tasks);
     
     res.json({
       success: true,
       charts: charts,
-      stats: {
-        totalTasks,
-        processedTasks,
-        successRate,
-        lastUpdated: new Date().toISOString()
-      }
+      stats: stats,
+      numberCardStats: numberCardStats,
+      lastUpdated: new Date().toISOString()
     });
     
   } catch (error) {
