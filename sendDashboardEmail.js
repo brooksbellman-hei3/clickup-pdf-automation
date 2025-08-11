@@ -52,7 +52,7 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
   const emailHtml = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px;">
-        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700;">🏀 Executive Dashboard</h1>
+        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700;">🏀 Overall Season Review</h1>
         <p style="margin: 10px 0 0 0; font-size: 1.2rem; opacity: 0.9;">Hawkeye Innovations - NBA Operations Analytics</p>
       </div>
 
@@ -61,17 +61,7 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
           📊 Executive Dashboard Update${dateRangeText}
         </h2>
         
-        <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
-          Your executive dashboard has been updated with the latest NBA operations data. 
-          Click the button below to access the full interactive dashboard with real-time metrics and analytics.
-        </p>
-
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${dashboardUrl}" style="display: inline-block; background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; transition: background 0.3s ease;">
-            🚀 Access Executive Dashboard
-          </a>
-        </div>
-
+        <!-- Key Metrics at the Top -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin: 30px 0;">
           <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
             <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;">${totalTasks}</div>
@@ -85,6 +75,17 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
             <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;">${successRate}%</div>
             <div style="color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase;">Success Rate</div>
           </div>
+        </div>
+        
+        <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
+          Your executive dashboard has been updated with the latest NBA operations data. 
+          Click the button below to access the full interactive dashboard with real-time metrics and analytics.
+        </p>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${dashboardUrl}" style="display: inline-block; background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; transition: background 0.3s ease;">
+            🚀 Access Executive Dashboard
+          </a>
         </div>
       </div>
 

@@ -375,7 +375,7 @@
             <div class="date-controls">
                 <input type="date" id="specificDate" class="date-input" placeholder="Select Date">
                 <button onclick="loadSpecificDateCharts()" class="btn btn-primary">Load Specific Date</button>
-                <button onclick="setTodayDate()" class="btn btn-secondary">Today</button>
+                <button onclick="setYesterdayDate()" class="btn btn-secondary">Yesterday</button>
                 <button onclick="sendDashboardEmail()" class="btn btn-primary" style="background: #28a745;">📧 Send Dashboard Email</button>
             </div>
             <div class="row-counter">
@@ -403,17 +403,43 @@
             loadSpecificDateCharts();
         }
 
-        // Set today's date
-        function setTodayDate() {
-            const today = new Date();
-            document.getElementById('specificDate').value = today.toISOString().split('T')[0];
-            loadSpecificDateCharts();
-        }
-
         // Initialize with yesterday's date
         window.onload = function() {
             setYesterdayDate();
+            // Auto-load all-time charts immediately
+            loadAllTimeCharts();
+            // Auto-send dashboard email for yesterday's data
+            setTimeout(() => {
+                autoSendDashboardEmail();
+            }, 2000); // Wait 2 seconds for charts to load
         };
+
+        // Auto-send dashboard email
+        async function autoSendDashboardEmail() {
+            const specificDate = document.getElementById('specificDate').value;
+            
+            try {
+                console.log('📧 Auto-sending dashboard email for date:', specificDate);
+                let response;
+                if (specificDate) {
+                    // Send email with specific date
+                    response = await fetch(`/send-dashboard-email/${specificDate}`);
+                } else {
+                    // Send general dashboard email
+                    response = await fetch('/send-dashboard-email');
+                }
+                
+                if (!response.ok) {
+                    throw new Error('Failed to send dashboard email');
+                }
+                
+                const data = await response.json();
+                console.log('✅ Auto-sent dashboard email successfully!');
+                
+            } catch (error) {
+                console.error('❌ Error auto-sending dashboard email:', error);
+            }
+        }
 
         // Load charts for specific date (Row 2)
         async function loadSpecificDateCharts() {
@@ -675,7 +701,7 @@
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            loadAllTimeCharts();
+            // loadAllTimeCharts(); // This is now handled by window.onload
             // setYesterdayDate() will be called by window.onload
         });
     </script>
