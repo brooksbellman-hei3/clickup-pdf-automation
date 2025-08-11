@@ -435,12 +435,14 @@
                 }
                 
                 const data = await response.json();
-                // Only show the second row (charts 9-18)
-                const secondRowCharts = data.charts.slice(9);
-                displayCharts(container, secondRowCharts, data.stats, data.numberCardStats);
+                // Show all charts (both rows)
+                const allCharts = data.charts;
+                // For specific date, we want to show both rows, but the first row is all-time
+                // and the second row is specific date. We'll show all charts.
+                displayCharts(container, allCharts, data.stats, data.numberCardStats);
                 
                 // Update last night's games counter
-                updateRowCounters(null, data.stats.lastNightsGames);
+                updateRowCounters(null, data.stats.lastNightGames);
                 
             } catch (error) {
                 container.innerHTML = `<div class="error">Error loading charts: ${error.message}</div>`;
@@ -616,7 +618,7 @@
                 displayCharts(container, data.charts, data.stats, data.numberCardStats);
                 
                 // Update total games counter
-                updateRowCounters(data.stats.totalTasks);
+                updateRowCounters(data.stats.totalGames);
                 
             } catch (error) {
                 container.innerHTML = `<div class="error">Error loading charts: ${error.message}</div>`;
