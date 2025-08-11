@@ -237,7 +237,7 @@ function generateNumberCardStats(tasks) {
   return stats;
 }
 
-// Modified function to generate charts excluding number card fields
+// Modified function to generate charts including number card fields
 async function generateExecutiveDashboardCharts(tasks, dateRange = null, specificDate = null) {
   console.log(`🎨 Generating executive dashboard charts for ${tasks.length} tasks`);
   if (dateRange) {
@@ -249,15 +249,9 @@ async function generateExecutiveDashboardCharts(tasks, dateRange = null, specifi
   
   const charts = [];
   
-  // Generate charts for each executive field (excluding number card fields)
+  // Generate charts for each executive field (including number card fields)
   for (let i = 0; i < EXECUTIVE_FIELDS.length; i++) {
     const fieldName = EXECUTIVE_FIELDS[i];
-    
-    // Skip number card fields - they will be displayed as stats in header
-    if (NUMBER_CARD_FIELDS.includes(fieldName)) {
-      console.log(`📊 Skipping number card field: ${fieldName} (will be displayed as stats)`);
-      continue;
-    }
     
     console.log(`📊 Processing chart field: ${fieldName}`);
     
@@ -448,7 +442,7 @@ function calculateDashboardStats(tasks, specificDate = null) {
   const liveTrackingValues = tasks.map(task => {
     const field = findFieldByName(task.custom_fields, 'Live Tracking Delivery');
     return field ? getFieldValue(field) : null;
-  }).filter(v => v !== null && v !== 'Unknown');
+  }).filter(v => v !== null && v !== 'Unknown' && v !== 'N/A');
   
   if (liveTrackingValues.length > 0) {
     const deliveredCount = liveTrackingValues.filter(v => {
@@ -458,7 +452,11 @@ function calculateDashboardStats(tasks, specificDate = null) {
              valueStr === 's4: minor issues (e)' ||
              valueStr === 's5 - good' || 
              valueStr === 's4 - minor issues (i)' || 
-             valueStr === 's4 - minor issues (e)';
+             valueStr === 's4 - minor issues (e)' ||
+             valueStr === 's5' ||
+             valueStr === 's4' ||
+             valueStr === 'p5: good' ||
+             valueStr === 'p4: minor';
     }).length;
     
     stats.liveTrackingDelivery = Math.round((deliveredCount / liveTrackingValues.length) * 100);
@@ -471,7 +469,7 @@ function calculateDashboardStats(tasks, specificDate = null) {
   const replayValues = tasks.map(task => {
     const field = findFieldByName(task.custom_fields, 'Replay Delivery');
     return field ? getFieldValue(field) : null;
-  }).filter(v => v !== null && v !== 'Unknown');
+  }).filter(v => v !== null && v !== 'Unknown' && v !== 'N/A');
   
   if (replayValues.length > 0) {
     const deliveredCount = replayValues.filter(v => {
@@ -481,7 +479,11 @@ function calculateDashboardStats(tasks, specificDate = null) {
              valueStr === 's4: minor issues (e)' ||
              valueStr === 's5 - good' || 
              valueStr === 's4 - minor issues (i)' || 
-             valueStr === 's4 - minor issues (e)';
+             valueStr === 's4 - minor issues (e)' ||
+             valueStr === 's5' ||
+             valueStr === 's4' ||
+             valueStr === 'p5: good' ||
+             valueStr === 'p4: minor';
     }).length;
     
     stats.replayDelivery = Math.round((deliveredCount / replayValues.length) * 100);
@@ -632,7 +634,7 @@ async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
   const labels = Object.keys(counts);
   const data = labels.map(l => counts[l]);
   
-  // Special handling for Resend field - inverted Yes/No colors
+  // Enhanced color mapping with fallback colors
   let colors;
   if (fieldName === 'Resend') {
     colors = labels.map(label => {
@@ -641,7 +643,23 @@ async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
       return EXECUTIVE_COLOR_SCHEME[label] || EXECUTIVE_COLOR_SCHEME['default'];
     });
   } else {
-    colors = labels.map(label => EXECUTIVE_COLOR_SCHEME[label] || EXECUTIVE_COLOR_SCHEME['default']);
+    colors = labels.map((label, index) => {
+      // Try exact match first
+      let color = EXECUTIVE_COLOR_SCHEME[label];
+      if (color) return color;
+      
+      // Try case-insensitive match
+      color = EXECUTIVE_COLOR_SCHEME[label.toLowerCase()];
+      if (color) return color;
+      
+      // Try case-insensitive match with uppercase
+      color = EXECUTIVE_COLOR_SCHEME[label.toUpperCase()];
+      if (color) return color;
+      
+      // Use predefined color palette as fallback
+      const fallbackColors = ['#28a745', '#ffc107', '#dc3545', '#fd7e14', '#007bff', '#6c757d', '#17a2b8', '#6f42c1'];
+      return fallbackColors[index % fallbackColors.length];
+    });
   }
 
   console.log(`📈 Final chart data:`);
@@ -730,7 +748,7 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
       <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
       
       ${chartData.map((item, i) => `
-        <rect x="${padding}" y="${60 + i * 50}" width="20" height="20" fill="${item.color}"/>
+        <rect x="${padding}" y="${60 + i * 50}" width="20" height="20" fill="${item.color}" stroke="#333" stroke-width="1"/>
         <text x="${padding + 30}" y="${75 + i * 50}" class="count-label">${item.label}:</text>
         <text x="${width - padding}" y="${75 + i * 50}" text-anchor="end" class="count-value">${item.count}</text>
       `).join('')}
@@ -840,6 +858,7 @@ module.exports = {
   generateCompleteDashboardCharts,
   filterTasksByEventDate,
   calculateDashboardStats,
+  generateNumberCardStats,
   EXECUTIVE_FIELDS,
   EXECUTIVE_COLOR_SCHEME
 };
