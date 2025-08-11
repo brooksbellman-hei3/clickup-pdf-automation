@@ -306,6 +306,11 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
+// Serve test dashboard HTML
+app.get('/test-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test-dashboard.html'));
+});
+
 // API endpoint for all-time dashboard charts (Row 1 only)
 app.get('/api/dashboard/all-time', async (req, res) => {
   try {
@@ -373,6 +378,127 @@ app.get('/api/dashboard/complete', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Error generating complete dashboard charts:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint with mock data to verify dashboard functionality
+app.get('/api/dashboard/test', async (req, res) => {
+  try {
+    console.log('🧪 Generating test dashboard with mock data...');
+    
+    // Mock tasks data
+    const mockTasks = [
+      {
+        name: 'Test Game 1',
+        custom_fields: [
+          { name: 'Live Tracking Delivery', value_text: 'S5: Good' },
+          { name: 'Replay Delivery', value_text: 'S4: Minor Issues (I)' },
+          { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
+          { name: 'Resend', value_text: 'No' },
+          { name: 'Event Date', value: 1735689600000 } // 2025-01-01
+        ]
+      },
+      {
+        name: 'Test Game 2',
+        custom_fields: [
+          { name: 'Live Tracking Delivery', value_text: 'S5: Good' },
+          { name: 'Replay Delivery', value_text: 'S5: Good' },
+          { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
+          { name: 'Resend', value_text: 'Yes' },
+          { name: 'Event Date', value: 1735776000000 } // 2025-01-02
+        ]
+      },
+      {
+        name: 'Test Game 3',
+        custom_fields: [
+          { name: 'Live Tracking Delivery', value_text: 'S4: Minor Issues (E)' },
+          { name: 'Replay Delivery', value_text: 'S5: Good' },
+          { name: 'NBA SLA Delivery Time', value_text: 'Missed: ≤ 30 MIN' },
+          { name: 'Resend', value_text: 'No' },
+          { name: 'Event Date', value: 1735862400000 } // 2025-01-03
+        ]
+      }
+    ];
+    
+    // Generate charts using the existing functions
+    const charts = await generateExecutiveDashboardCharts(mockTasks);
+    const stats = calculateDashboardStats(mockTasks);
+    const numberCardStats = generateNumberCardStats(mockTasks);
+    
+    res.json({
+      success: true,
+      charts: charts,
+      stats: stats,
+      numberCardStats: numberCardStats,
+      lastUpdated: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error generating test dashboard:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint for specific date with mock data
+app.get('/api/dashboard/test-complete', async (req, res) => {
+  try {
+    const { specificDate } = req.query;
+    console.log('🧪 Generating test complete dashboard with mock data for date:', specificDate);
+    
+    // Mock tasks data with different dates
+    const mockTasks = [
+      {
+        name: 'Test Game 1',
+        custom_fields: [
+          { name: 'Live Tracking Delivery', value_text: 'S5: Good' },
+          { name: 'Replay Delivery', value_text: 'S4: Minor Issues (I)' },
+          { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
+          { name: 'Resend', value_text: 'No' },
+          { name: 'Event Date', value: 1735689600000 } // 2025-01-01
+        ]
+      },
+      {
+        name: 'Test Game 2',
+        custom_fields: [
+          { name: 'Live Tracking Delivery', value_text: 'S5: Good' },
+          { name: 'Replay Delivery', value_text: 'S5: Good' },
+          { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
+          { name: 'Resend', value_text: 'Yes' },
+          { name: 'Event Date', value: 1735776000000 } // 2025-01-02
+        ]
+      },
+      {
+        name: 'Test Game 3',
+        custom_fields: [
+          { name: 'Live Tracking Delivery', value_text: 'S4: Minor Issues (E)' },
+          { name: 'Replay Delivery', value_text: 'S5: Good' },
+          { name: 'NBA SLA Delivery Time', value_text: 'Missed: ≤ 30 MIN' },
+          { name: 'Resend', value_text: 'No' },
+          { name: 'Event Date', value: 1735862400000 } // 2025-01-03
+        ]
+      }
+    ];
+    
+    const result = await generateCompleteDashboardCharts(mockTasks, specificDate);
+    
+    res.json({
+      success: true,
+      charts: result.charts,
+      specificDate: specificDate,
+      stats: result.stats,
+      numberCardStats: result.numberCardStats,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error generating test complete dashboard:', error);
     res.status(500).json({
       success: false,
       error: error.message

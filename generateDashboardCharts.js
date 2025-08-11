@@ -317,7 +317,18 @@ async function generateSpecificDateCharts(tasks, specificDate) {
   const filteredTasks = filterTasksByEventDate(tasks, specificDate);
   console.log(`📅 Found ${filteredTasks.length} tasks for date: ${specificDate}`);
   
-  return await generateExecutiveDashboardCharts(filteredTasks, null, specificDate);
+  if (filteredTasks.length === 0) {
+    console.log(`⚠️ No tasks found for date ${specificDate}, returning empty chart array`);
+    return [];
+  }
+  
+  // Log some sample task names for debugging
+  console.log(`📋 Sample tasks for ${specificDate}:`, filteredTasks.slice(0, 3).map(t => t.name));
+  
+  const charts = await generateExecutiveDashboardCharts(filteredTasks, null, specificDate);
+  console.log(`📊 Generated ${charts.length} specific date charts for ${specificDate}`);
+  
+  return charts;
 }
 
 // NEW: Function to filter tasks by Event Date
@@ -605,7 +616,7 @@ function calculateDashboardStats(tasks, specificDate = null) {
 }
 
 async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
-  console.log(`🔍 Processing field: "${fieldName}"`);
+  console.log(`🔍 Processing field: "${fieldName}" for ${tasks.length} tasks`);
 
   if (!tasks || tasks.length === 0) {
     console.warn(`⚠️ No tasks provided for chart generation`);
@@ -622,17 +633,25 @@ async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
 
   const counts = {};
   let processedTasks = 0;
+  let fieldNotFoundCount = 0;
 
   console.log(`🔍 Processing ${tasks.length} tasks for field "${fieldName}"`);
 
   for (const task of tasks) {
-    if (!task.custom_fields) continue;
+    if (!task.custom_fields) {
+      console.log(`⚠️ Task "${task.name}" has no custom_fields`);
+      continue;
+    }
     
     // Try to find the field with flexible name matching
     let field = findFieldByName(task.custom_fields, fieldName);
     
     if (!field) {
-      console.log(`❌ Field "${fieldName}" not found in custom_fields for task: ${task.name}`);
+      fieldNotFoundCount++;
+      if (fieldNotFoundCount <= 3) { // Only log first 3 for brevity
+        console.log(`❌ Field "${fieldName}" not found in custom_fields for task: ${task.name}`);
+        console.log(`   Available fields:`, task.custom_fields.map(f => f.name));
+      }
       continue;
     }
 
@@ -641,11 +660,16 @@ async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
     if (value && value !== 'null' && value !== 'undefined') {
       counts[value] = (counts[value] || 0) + 1;
       processedTasks++;
+    } else {
+      console.log(`⚠️ Task "${task.name}" has empty/null value for "${fieldName}": ${value}`);
     }
   }
 
-  console.log(`📊 Final counts for "${fieldName}":`, counts);
-  console.log(`📈 Processed ${processedTasks} tasks with data`);
+  console.log(`📊 Field "${fieldName}" summary:`);
+  console.log(`   Total tasks: ${tasks.length}`);
+  console.log(`   Field not found: ${fieldNotFoundCount}`);
+  console.log(`   Processed with data: ${processedTasks}`);
+  console.log(`   Final counts:`, counts);
 
   if (processedTasks === 0 || Object.keys(counts).length === 0) {
     console.warn(`⚠️ No valid data found for "${fieldName}"`);
@@ -683,7 +707,7 @@ async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
     });
   }
 
-  console.log(`📈 Final chart data:`);
+  console.log(`📈 Final chart data for "${fieldName}":`);
   console.log(`   Labels: [${labels.join(', ')}]`);
   console.log(`   Data: [${data.join(', ')}]`);
   console.log(`   Colors: [${colors.join(', ')}]`);

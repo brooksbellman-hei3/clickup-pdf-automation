@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Dashboard - Hawkeye Innovations</title>
+    <title>Test Dashboard - Hawkeye Innovations</title>
     <style>
         * {
             margin: 0;
@@ -39,12 +39,6 @@
             font-size: 2.5rem;
             margin-bottom: 10px;
             font-weight: 700;
-        }
-
-        .header p {
-            color: #7f8c8d;
-            font-size: 1.1rem;
-            margin-bottom: 20px;
         }
 
         .stats-grid {
@@ -99,6 +93,36 @@
             padding-bottom: 10px;
         }
 
+        .row-counter {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .counter-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 20px 30px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            min-width: 150px;
+        }
+
+        .counter-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .counter-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -131,36 +155,6 @@
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
-        
-        .chart-image svg {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-        }
-
-        .date-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .date-input {
-            padding: 10px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1rem;
-            background: white;
-            color: #333;
-            transition: border-color 0.3s ease;
-        }
-
-        .date-input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
 
         .btn {
             padding: 10px 20px;
@@ -170,6 +164,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             font-weight: 600;
+            margin: 5px;
         }
 
         .btn-primary {
@@ -182,37 +177,10 @@
             transform: translateY(-2px);
         }
 
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-            transform: translateY(-2px);
-        }
-
         .loading {
             text-align: center;
             padding: 40px;
             color: #7f8c8d;
-        }
-
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         .error {
@@ -232,82 +200,13 @@
             margin: 20px 0;
             text-align: center;
         }
-
-        .row-counter {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-
-        .counter-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 12px;
-            padding: 20px 30px;
-            text-align: center;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-            min-width: 150px;
-        }
-
-        .counter-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .counter-label {
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.9;
-        }
-
-        .last-night-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #e0e0e0;
-        }
-
-        .last-night-section h3 {
-            color: #2c3e50;
-            font-size: 1.3rem;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .date-controls {
-                flex-direction: column;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏀 Overall Season Review</h1>
-            <p>Hawkeye Innovations - NBA Operations Analytics</p>
+            <h1>🧪 Test Dashboard</h1>
+            <p>Testing Dashboard Fixes with Mock Data</p>
             
             <!-- Season Overview Stats -->
             <div class="stats-grid">
@@ -332,33 +231,10 @@
                     <div class="stat-label">Resend %</div>
                 </div>
             </div>
-            
-            <!-- Last Night's Performance -->
-            <div class="last-night-section">
-                <h3>📅 Last Night's Performance</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-number" id="lastNightGames">-</div>
-                        <div class="stat-label"># of Games</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="lastNightSLAsHit">-</div>
-                        <div class="stat-label"># of SLAs Hit</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="lastNightSLAsMissed">-</div>
-                        <div class="stat-label"># of SLAs Missed</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="lastNightResends">-</div>
-                        <div class="stat-label"># of Resends</div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div class="dashboard-section">
-            <h2 class="section-title">📊 All-Time Metrics</h2>
+            <h2 class="section-title">📊 All-Time Metrics (Test)</h2>
             <div class="row-counter">
                 <div class="counter-card">
                     <div class="counter-number" id="allTimeTotalGames">-</div>
@@ -371,12 +247,11 @@
         </div>
 
         <div class="dashboard-section">
-            <h2 class="section-title">📅 Specific Date Metrics</h2>
-            <div class="date-controls">
-                <input type="date" id="specificDate" class="date-input" placeholder="Select Date">
-                <button onclick="loadSpecificDateCharts()" class="btn btn-primary">Load Specific Date</button>
-                <button onclick="setTodayDate()" class="btn btn-secondary">Today</button>
-                <button onclick="sendDashboardEmail()" class="btn btn-primary" style="background: #28a745;">📧 Send Dashboard Email</button>
+            <h2 class="section-title">📅 Specific Date Metrics (Test)</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button onclick="loadTestSpecificDate('2025-01-01')" class="btn btn-primary">Test 2025-01-01</button>
+                <button onclick="loadTestSpecificDate('2025-01-02')" class="btn btn-primary">Test 2025-01-02</button>
+                <button onclick="loadTestSpecificDate('2025-01-03')" class="btn btn-primary">Test 2025-01-03</button>
             </div>
             <div class="row-counter">
                 <div class="counter-card">
@@ -385,112 +260,12 @@
                 </div>
             </div>
             <div class="charts-grid" id="specificDateCharts">
-                <div class="loading">Select a specific date to view charts...</div>
+                <div class="loading">Click a test date button to view charts...</div>
             </div>
         </div>
     </div>
 
-    <div class="footer">
-        <p>Powered by Hawkeye Innovations | Executive Dashboard v2.0</p>
-    </div>
-
     <script>
-        // Set yesterday's date as default
-        function setYesterdayDate() {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            document.getElementById('specificDate').value = yesterday.toISOString().split('T')[0];
-            loadSpecificDateCharts();
-        }
-
-        // Set today's date
-        function setTodayDate() {
-            const today = new Date();
-            document.getElementById('specificDate').value = today.toISOString().split('T')[0];
-            loadSpecificDateCharts();
-        }
-
-        // Initialize with yesterday's date
-        window.onload = function() {
-            setYesterdayDate();
-        };
-
-        // Load charts for specific date (Row 2)
-        async function loadSpecificDateCharts() {
-            const specificDate = document.getElementById('specificDate').value;
-            
-            if (!specificDate) {
-                alert('Please select a specific date');
-                return;
-            }
-            
-            const container = document.getElementById('specificDateCharts');
-            container.innerHTML = '<div class="loading">Loading specific date charts...</div>';
-            
-            try {
-                const response = await fetch(`/api/dashboard/complete?specificDate=${specificDate}`);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load specific date charts');
-                }
-                
-                const data = await response.json();
-                
-                // The complete endpoint returns both all-time and specific date charts
-                // We need to filter to show only the specific date charts (those with date in title)
-                const allCharts = data.charts || [];
-                const specificDateCharts = allCharts.filter(chart => 
-                    chart.title && chart.title.includes(`(${specificDate})`)
-                );
-                
-                console.log(`📊 Total charts received: ${allCharts.length}`);
-                console.log(`📊 Found ${specificDateCharts.length} specific date charts for ${specificDate}`);
-                console.log('📊 Specific date chart titles:', specificDateCharts.map(c => c.title));
-                
-                // Show specific date charts if found, otherwise show a message
-                if (specificDateCharts.length > 0) {
-                    displayCharts(container, specificDateCharts, data.stats, data.numberCardStats);
-                } else {
-                    container.innerHTML = `<div class="error">No data available for ${specificDate}. Please check if there are any games scheduled for this date.</div>`;
-                }
-                
-                // Update last night's games counter
-                if (data.stats && data.stats.lastNightGames !== undefined) {
-                    updateRowCounters(null, data.stats.lastNightGames);
-                }
-                
-            } catch (error) {
-                console.error('❌ Error loading specific date charts:', error);
-                container.innerHTML = `<div class="error">Error loading charts: ${error.message}</div>`;
-            }
-        }
-
-        // Send dashboard email
-        async function sendDashboardEmail() {
-            const specificDate = document.getElementById('specificDate').value;
-            
-            try {
-                let response;
-                if (specificDate) {
-                    // Send email with specific date
-                    response = await fetch(`/send-dashboard-email/${specificDate}`);
-                } else {
-                    // Send general dashboard email
-                    response = await fetch('/send-dashboard-email');
-                }
-                
-                if (!response.ok) {
-                    throw new Error('Failed to send dashboard email');
-                }
-                
-                const data = await response.json();
-                alert('✅ Dashboard email sent successfully! Check your inbox.');
-                
-            } catch (error) {
-                alert(`❌ Error sending dashboard email: ${error.message}`);
-            }
-        }
-
         // Display charts in container
         function displayCharts(container, charts, stats, numberCardStats) {
             if (!charts || charts.length === 0) {
@@ -554,16 +329,7 @@
             
             // Last night's stats
             if (stats.lastNightGames !== undefined && stats.lastNightGames !== null) {
-                document.getElementById('lastNightGames').textContent = stats.lastNightGames;
-            }
-            if (stats.lastNightSLAsHit !== undefined && stats.lastNightSLAsHit !== null) {
-                document.getElementById('lastNightSLAsHit').textContent = stats.lastNightSLAsHit;
-            }
-            if (stats.lastNightSLAsMissed !== undefined && stats.lastNightSLAsMissed !== null) {
-                document.getElementById('lastNightSLAsMissed').textContent = stats.lastNightSLAsMissed;
-            }
-            if (stats.lastNightResends !== undefined && stats.lastNightResends !== null) {
-                document.getElementById('lastNightResends').textContent = stats.lastNightResends;
+                document.getElementById('lastNightsGames').textContent = stats.lastNightGames;
             }
             
             // Update number card stats if provided
@@ -590,17 +356,6 @@
                 }
             }
             
-            // Update Scrub SLA stats
-            if (numberCardStats['Scrub SLA ']) {
-                const scrubStats = numberCardStats['Scrub SLA '];
-                const yesScrub = scrubStats['NBA | Yes | < 30 Mins Post Game'] || 0;
-                const totalScrub = Object.values(scrubStats).reduce((sum, count) => sum + count, 0);
-                const scrubPercentage = totalScrub > 0 ? Math.round((yesScrub / totalScrub) * 100) : 0;
-                
-                // Add a new stat for Scrub SLA if needed
-                console.log(`Scrub SLA: ${scrubPercentage}% (${yesScrub}/${totalScrub})`);
-            }
-            
             // Update Resend stats
             if (numberCardStats['Resend']) {
                 const resendStats = numberCardStats['Resend'];
@@ -613,6 +368,77 @@
                 if (resendElement) {
                     resendElement.textContent = resendPercentage + '%';
                 }
+            }
+        }
+
+        // Load all-time charts on page load
+        async function loadAllTimeCharts() {
+            const container = document.getElementById('allTimeCharts');
+            
+            try {
+                console.log('📊 Loading all-time charts...');
+                const response = await fetch('/api/dashboard/test');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load all-time charts');
+                }
+                
+                const data = await response.json();
+                console.log('📊 All-time data received:', data);
+                
+                displayCharts(container, data.charts, data.stats, data.numberCardStats);
+                
+                // Update total games counter
+                if (data.stats && data.stats.totalGames !== undefined) {
+                    updateRowCounters(data.stats.totalGames);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading all-time charts:', error);
+                container.innerHTML = `<div class="error">Error loading charts: ${error.message}</div>`;
+            }
+        }
+
+        // Load test specific date charts
+        async function loadTestSpecificDate(specificDate) {
+            const container = document.getElementById('specificDateCharts');
+            container.innerHTML = '<div class="loading">Loading specific date charts...</div>';
+            
+            try {
+                const response = await fetch(`/api/dashboard/test-complete?specificDate=${specificDate}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load specific date charts');
+                }
+                
+                const data = await response.json();
+                
+                // The complete endpoint returns both all-time and specific date charts
+                // We need to filter to show only the specific date charts (those with date in title)
+                const allCharts = data.charts || [];
+                const specificDateCharts = allCharts.filter(chart => 
+                    chart.title && chart.title.includes(`(${specificDate})`)
+                );
+                
+                console.log(`📊 Total charts received: ${allCharts.length}`);
+                console.log(`📊 Found ${specificDateCharts.length} specific date charts for ${specificDate}`);
+                console.log('📊 Specific date chart titles:', specificDateCharts.map(c => c.title));
+                
+                // Show specific date charts if found, otherwise show a message
+                if (specificDateCharts.length > 0) {
+                    displayCharts(container, specificDateCharts, data.stats, data.numberCardStats);
+                } else {
+                    container.innerHTML = `<div class="error">No data available for ${specificDate}. Please check if there are any games scheduled for this date.</div>`;
+                }
+                
+                // Update last night's games counter
+                if (data.stats && data.stats.lastNightGames !== undefined) {
+                    updateRowCounters(null, data.stats.lastNightGames);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error loading specific date charts:', error);
+                container.innerHTML = `<div class="error">Error loading charts: ${error.message}</div>`;
             }
         }
 
@@ -645,38 +471,9 @@
             }
         }
 
-        // Load all-time charts on page load
-        async function loadAllTimeCharts() {
-            const container = document.getElementById('allTimeCharts');
-            
-            try {
-                console.log('📊 Loading all-time charts...');
-                const response = await fetch('/api/dashboard/all-time');
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load all-time charts');
-                }
-                
-                const data = await response.json();
-                console.log('📊 All-time data received:', data);
-                
-                displayCharts(container, data.charts, data.stats, data.numberCardStats);
-                
-                // Update total games counter
-                if (data.stats && data.stats.totalGames !== undefined) {
-                    updateRowCounters(data.stats.totalGames);
-                }
-                
-            } catch (error) {
-                console.error('❌ Error loading all-time charts:', error);
-                container.innerHTML = `<div class="error">Error loading charts: ${error.message}</div>`;
-            }
-        }
-
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
             loadAllTimeCharts();
-            // setYesterdayDate() will be called by window.onload
         });
     </script>
 </body>
