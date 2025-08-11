@@ -73,12 +73,33 @@ function getFieldValue(field) {
     return field.value_text.trim();
   }
   
+  // Try type_config for dropdown values FIRST (before converting to string)
+  if (field.type_config && field.type_config.options) {
+    const options = field.type_config.options;
+    if (field.value !== null && field.value !== undefined) {
+      // Find the option that matches the value
+      const option = options.find(opt => 
+        opt.id === field.value || 
+        opt.orderindex === field.value ||
+        String(opt.id) === String(field.value) ||
+        String(opt.orderindex) === String(field.value)
+      );
+      if (option && option.name) {
+        return option.name;
+      }
+    }
+  }
+  
   // Try value property
   if (field.value !== null && field.value !== undefined && field.value !== '') {
     if (typeof field.value === 'string') {
       return field.value.trim();
     } else if (typeof field.value === 'object' && field.value.name) {
       return field.value.name;
+    } else if (typeof field.value === 'object' && field.value.label) {
+      return field.value.label;
+    } else if (typeof field.value === 'object' && field.value.value) {
+      return field.value.value;
     } else {
       return String(field.value).trim();
     }
@@ -859,6 +880,8 @@ module.exports = {
   filterTasksByEventDate,
   calculateDashboardStats,
   generateNumberCardStats,
+  findFieldByName,
+  getFieldValue,
   EXECUTIVE_FIELDS,
   EXECUTIVE_COLOR_SCHEME
 };
