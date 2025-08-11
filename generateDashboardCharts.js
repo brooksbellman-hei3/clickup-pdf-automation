@@ -840,19 +840,32 @@ async function generateSimpleSVGChart(title, labels, data, colors, index, width,
     const startAngle = currentAngle;
     const endAngle = currentAngle + sliceAngle;
     
-    const startX = chartCenterX + Math.cos(startAngle) * radius;
-    const startY = chartCenterY + Math.sin(startAngle) * radius;
-    const endX = chartCenterX + Math.cos(endAngle) * radius;
-    const endY = chartCenterY + Math.sin(endAngle) * radius;
-    
-    const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
-    
-    const pathData = [
-      `M ${chartCenterX} ${chartCenterY}`,
-      `L ${startX} ${startY}`,
-      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-      `Z`
-    ].join(' ');
+    // Handle single value case (full circle)
+    let pathData;
+    if (data.length === 1) {
+      // Create a full circle for single value
+      pathData = [
+        `M ${chartCenterX} ${chartCenterY - radius}`,
+        `A ${radius} ${radius} 0 1 1 ${chartCenterX} ${chartCenterY + radius}`,
+        `A ${radius} ${radius} 0 1 1 ${chartCenterX} ${chartCenterY - radius}`,
+        `Z`
+      ].join(' ');
+    } else {
+      // Create pie slice for multiple values
+      const startX = chartCenterX + Math.cos(startAngle) * radius;
+      const startY = chartCenterY + Math.sin(startAngle) * radius;
+      const endX = chartCenterX + Math.cos(endAngle) * radius;
+      const endY = chartCenterY + Math.sin(endAngle) * radius;
+      
+      const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
+      
+      pathData = [
+        `M ${chartCenterX} ${chartCenterY}`,
+        `L ${startX} ${startY}`,
+        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+        `Z`
+      ].join(' ');
+    }
     
     currentAngle = endAngle;
     

@@ -483,6 +483,16 @@ app.get('/api/dashboard/test-complete', async (req, res) => {
           { name: 'Resend', value_text: 'No' },
           { name: 'Event Date', value: 1735862400000 } // 2025-01-03
         ]
+      },
+      {
+        name: 'Test Game 4',
+        custom_fields: [
+          { name: 'Live Tracking Delivery', value_text: 'S5: Good' },
+          { name: 'Replay Delivery', value_text: 'S4: Minor Issues (I)' },
+          { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
+          { name: 'Resend', value_text: 'No' },
+          { name: 'Event Date', value: 1735862400000 } // 2025-01-03 (same date as Game 3)
+        ]
       }
     ];
     
