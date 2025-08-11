@@ -1,65 +1,28 @@
 {
   "name": "clickup-pdf-automation",
   "version": "1.0.0",
-  "description": "Automated PDF reporting from ClickUp with email delivery",
+  "description": "ClickUp PDF automation with dashboard",
   "main": "index.js",
   "scripts": {
-    "canvas-test": "node canvas_test.js",
     "start": "node index.js",
-    "test": "node scheduler.js --test",
-    "test-dashboard": "node testDashboard.js",
-    "dev": "nodemon index.js",
-    "docker:build": "docker build -t clickup-pdf-reporter .",
-    "docker:run": "docker-compose up -d",
-    "docker:stop": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "deploy:render": "./deploy.sh render",
-    "deploy:local": "./deploy.sh local",
-    "validate": "node -e \"require('./sendEmail'); console.log('✅ All modules loaded successfully')\"",
-    "postinstall": "npm rebuild canvas && echo '✅ Dependencies installed successfully'",
-    "diagnostic": "node diagnostic.js",
-    "health-check": "node health_check.js",
-    "test-fixes": "node testFixes.js",
-    "test-new-dashboard": "node testNewDashboard.js",
-    "debug-fields": "node debugFields.js",
-    "test-dashboard-fixes": "node testDashboardFixes.js",
-    "debug-stats": "node debugStats.js",
-    "test-number-cards": "node testNumberCards.js",
+    "test": "node testDashboard.js",
     "debug-scrub-sla": "node debugScrubSLA.js",
-    "test-all-fixes": "node testAllFixes.js"
+    "test-all-fixes": "node testAllFixes.js",
+    "test-dashboard": "node testDashboard.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
-    "express": "^4.18.2",
-    "chart.js": "^3.9.1",
-    "chartjs-node-canvas": "^4.1.6",
     "dotenv": "^16.3.1",
-    "nodemailer": "^6.9.8",
+    "nodemailer": "^6.9.7",
     "node-cron": "^3.0.3",
     "pdfkit": "^0.14.0",
-    "chartjs-plugin-datalabels": "^2.2.0",
-    "sharp": "^0.33.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
+    "express": "^4.18.2"
   },
   "engines": {
-    "node": "20.x",
+    "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
-  "keywords": [
-    "clickup",
-    "automation",
-    "pdf",
-    "reporting",
-    "email",
-    "charts",
-    "scheduling"
-  ],
+  "keywords": ["clickup", "pdf", "automation", "dashboard"],
   "author": "Your Name",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/brooksbellman-hei3/clickup-pdf-automation.git"
-  }
+  "license": "MIT"
 }

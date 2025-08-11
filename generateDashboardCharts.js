@@ -1,25 +1,7 @@
 const path = require("path");
-const sharp = require("sharp");
 
-// Try to load ChartJSNodeCanvas, fall back to Sharp-only if it fails
-let ChartJSNodeCanvas;
-try {
-  ChartJSNodeCanvas = require("chartjs-node-canvas").ChartJSNodeCanvas;
-  console.log("✅ ChartJSNodeCanvas loaded successfully");
-} catch (error) {
-  console.warn("⚠️ ChartJSNodeCanvas failed to load, using Sharp fallback:", error.message);
-  ChartJSNodeCanvas = null;
-}
-
-// Try to load Sharp
-let sharp;
-try {
-  sharp = require("sharp");
-  console.log("✅ Sharp loaded successfully");
-} catch (error) {
-  console.warn("⚠️ Sharp failed to load:", error.message);
-  sharp = null;
-}
+// Chart generation without external dependencies
+console.log("📊 Using SVG-only chart generation (no external dependencies)");
 
 // Executive dashboard field configuration
 const EXECUTIVE_FIELDS = [
@@ -678,206 +660,15 @@ async function generatePieChart(title, labels, data, colors, index) {
   console.log(`   Labels: ${labels.join(', ')}`);
   console.log(`   Data: ${data.join(', ')}`);
 
-  // Try ChartJS first, fall back to Sharp if it fails
-  if (ChartJSNodeCanvas) {
-    try {
-      return await generateChartJSChart(title, labels, data, colors, index, width, height);
-    } catch (error) {
-      console.warn(`⚠️ ChartJS failed for "${title}", falling back to Sharp:`, error.message);
-    }
-  }
-  
-  // Try Sharp-based chart
-  if (sharp) {
-    try {
-      return await generateSharpChart(title, labels, data, colors, index, width, height);
-    } catch (error) {
-      console.warn(`⚠️ Sharp failed for "${title}", falling back to simple SVG:`, error.message);
-    }
-  }
-  
-  // Fallback to simple SVG chart
+  // Use SVG-only chart generation
   return await generateSimpleSVGChart(title, labels, data, colors, index, width, height);
 }
 
-async function generateChartJSChart(title, labels, data, colors, index, width, height) {
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width,
-    height,
-    backgroundColour: "white",
-    devicePixelRatio: 1,
-    chartCallback: (ChartJS) => {
-      ChartJS.defaults.font = ChartJS.defaults.font || {};
-      ChartJS.defaults.font.family = 'Arial, sans-serif';
-      ChartJS.defaults.font.size = 12;
-    }
-  });
 
-  const configuration = {
-    type: "pie",
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: colors,
-          borderColor: "#ffffff",
-          borderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: false,
-      animation: false,
-      plugins: {
-        title: {
-          display: true,
-          text: title,
-          font: { size: 16, weight: 'bold' },
-          color: '#000000',
-          padding: 15
-        },
-        legend: {
-          display: true,
-          position: "right",
-          labels: {
-            font: { size: 12 },
-            color: "#000000",
-            usePointStyle: true,
-            padding: 10
-          },
-        },
-      },
-      layout: {
-        padding: {
-          top: 15,
-          bottom: 15,
-          left: 15,
-          right: 15
-        }
-      }
-    },
-  };
 
-  console.log(`   Rendering ChartJS buffer...`);
-  const buffer = await chartJSNodeCanvas.renderToBuffer(configuration, "image/png");
-  
-  if (!buffer || buffer.length === 0) {
-    throw new Error("ChartJS buffer is empty");
-  }
-  
-  console.log(`   ChartJS buffer size: ${buffer.length} bytes`);
-  return await processChartBuffer(buffer, title, index);
-}
 
-async function generateSharpChart(title, labels, data, colors, index, width, height) {
-  console.log(`   Generating Sharp fallback chart...`);
-  
-  const total = data.reduce((sum, val) => sum + val, 0);
-  const labelHeight = 20;
-  const chartCenterX = width * 0.35;
-  const chartCenterY = height * 0.5;
-  const radius = Math.min(width * 0.2, height * 0.2);
-  
-  let currentAngle = -Math.PI / 2;
-  const slices = data.map((value, i) => {
-    const percentage = (value / total) * 100;
-    const sliceAngle = (value / total) * 2 * Math.PI;
-    
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + sliceAngle;
-    
-    const startX = chartCenterX + Math.cos(startAngle) * radius;
-    const startY = chartCenterY + Math.sin(startAngle) * radius;
-    const endX = chartCenterX + Math.cos(endAngle) * radius;
-    const endY = chartCenterY + Math.sin(endAngle) * radius;
-    
-    const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
-    
-    const pathData = [
-      `M ${chartCenterX} ${chartCenterY}`,
-      `L ${startX} ${startY}`,
-      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-      `Z`
-    ].join(' ');
-    
-    currentAngle = endAngle;
-    
-    return {
-      path: pathData,
-      color: colors[i] || '#666',
-      label: labels[i],
-      value: value,
-      percentage: percentage.toFixed(1)
-    };
-  });
-  
-  const legendX = width * 0.6;
-  const legendStartY = height * 0.25;
-  
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <style>
-          .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }
-          .legend-text { font-family: Arial, sans-serif; font-size: 12px; fill: #000; }
-          .legend-value { font-family: Arial, sans-serif; font-size: 10px; fill: #666; }
-        </style>
-      </defs>
-      
-      <rect width="100%" height="100%" fill="white"/>
-      
-      <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
-      
-      ${slices.map(slice => `
-        <path d="${slice.path}" fill="${slice.color}" stroke="white" stroke-width="2"/>
-      `).join('')}
-      
-      ${slices.map((slice, i) => `
-        <rect x="${legendX}" y="${legendStartY + i * labelHeight}" width="12" height="12" fill="${slice.color}"/>
-        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 9}" class="legend-text">${slice.label}</text>
-        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 9 + 12}" class="legend-value">${slice.value} (${slice.percentage}%)</text>
-      `).join('')}
-    </svg>
-  `;
-  
-  console.log(`   Generating Sharp PNG from SVG...`);
-  const buffer = await sharp(Buffer.from(svg))
-    .png({
-      quality: 90,
-      compressionLevel: 6
-    })
-    .toBuffer();
-    
-  console.log(`   Sharp buffer size: ${buffer.length} bytes`);
-  return await processChartBuffer(buffer, title, index);
-}
 
-async function processChartBuffer(buffer, title, index) {
-  const timestamp = Date.now();
-  const filename = `executive_chart_${index}_${timestamp}.png`;
-  const filePath = path.join(__dirname, filename);
 
-  console.log(`   Processing final image...`);
-  
-  await sharp(buffer)
-    .flatten({ background: "#ffffff" })
-    .png({
-      quality: 90,
-      compressionLevel: 6,
-      force: true
-    })
-    .toFile(filePath);
-
-  console.log(`✅ Executive chart saved: ${filePath}`);
-  
-  return {
-    filePath,
-    base64Chart: buffer.toString("base64"),
-    filename: filename,
-    title: title
-  };
-}
 
 // Generate number count chart for specific fields
 async function generateNumberCountChart(tasks, fieldName, title, index) {
@@ -946,16 +737,14 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
     </svg>
   `;
 
-  console.log(`   Generating Sharp PNG from SVG...`);
-  const buffer = await sharp(Buffer.from(svg))
-    .png({
-      quality: 90,
-      compressionLevel: 6
-    })
-    .toBuffer();
-    
-  console.log(`   Sharp buffer size: ${buffer.length} bytes`);
-  return await processChartBuffer(buffer, title, index);
+  console.log(`   Generated SVG chart`);
+  return {
+    title: title,
+    filePath: `chart_${index}.svg`,
+    buffer: Buffer.from(svg),
+    base64Chart: Buffer.from(svg).toString('base64'),
+    svg: svg
+  };
 }
 
 // Simple SVG chart generation as final fallback
