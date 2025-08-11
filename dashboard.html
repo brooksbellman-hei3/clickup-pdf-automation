@@ -361,7 +361,7 @@
             <h2 class="section-title">📊 All-Time Metrics</h2>
             <div class="row-counter">
                 <div class="counter-card">
-                    <div class="counter-number" id="totalGames">-</div>
+                    <div class="counter-number" id="allTimeTotalGames">-</div>
                     <div class="counter-label">Total Games</div>
                 </div>
             </div>
@@ -435,11 +435,10 @@
                 }
                 
                 const data = await response.json();
-                // Show all charts (both rows)
-                const allCharts = data.charts;
-                // For specific date, we want to show both rows, but the first row is all-time
-                // and the second row is specific date. We'll show all charts.
-                displayCharts(container, allCharts, data.stats, data.numberCardStats);
+                // Show only the specific date charts (second row)
+                // The first 5 charts are all-time, the next 5 are specific date
+                const specificDateCharts = data.charts.slice(5);
+                displayCharts(container, specificDateCharts, data.stats, data.numberCardStats);
                 
                 // Update last night's games counter
                 updateRowCounters(null, data.stats.lastNightGames);
@@ -592,14 +591,25 @@
 
         // Update row counters
         function updateRowCounters(totalGames, lastNightsGames = null) {
-            // Update total games counter
+            // Update total games counter (both locations)
             if (totalGames !== undefined) {
-                document.getElementById('totalGames').textContent = totalGames;
+                const totalGamesElement = document.getElementById('totalGames');
+                const allTimeTotalGamesElement = document.getElementById('allTimeTotalGames');
+                
+                if (totalGamesElement) {
+                    totalGamesElement.textContent = totalGames;
+                }
+                if (allTimeTotalGamesElement) {
+                    allTimeTotalGamesElement.textContent = totalGames;
+                }
             }
             
             // Update last night's games counter
             if (lastNightsGames !== undefined && lastNightsGames !== null) {
-                document.getElementById('lastNightsGames').textContent = lastNightsGames;
+                const lastNightsGamesElement = document.getElementById('lastNightsGames');
+                if (lastNightsGamesElement) {
+                    lastNightsGamesElement.textContent = lastNightsGames;
+                }
             }
         }
 
