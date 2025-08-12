@@ -465,7 +465,7 @@ function extractOperationalNotes(tasks, specificDate = null) {
             value.toLowerCase() !== 'undefined') {
           
           // Clean up the field name for display
-          const displayName = fieldName.replace(' - Live Ops ', ' Notes');
+          const displayName = fieldName.replace(' - Live Ops ', '');
           
           notes.push({
             taskName: task.name,
