@@ -502,10 +502,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏀 Overall Season Review</h1>
+            <h1>🏀 NBA Operations Dashboard</h1>
             <p>Hawkeye Innovations - NBA Operations Analytics</p>
             
             <!-- Season Overview Stats -->
+            <h2 class="section-title">📊 Season Review</h2>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-number" id="totalGames">-</div>
@@ -554,7 +555,7 @@
         </div>
 
         <div class="dashboard-section">
-            <h2 class="section-title">📊 All-Time Metrics</h2>
+            <h2 class="section-title">📊 Season Delivery Metrics</h2>
             <div class="row-counter">
                 <div class="counter-card">
                     <div class="counter-number" id="allTimeTotalGames">-</div>
@@ -567,7 +568,7 @@
         </div>
 
         <div class="dashboard-section">
-            <h2 class="section-title">📅 Specific Date Metrics</h2>
+            <h2 class="section-title">📅 Specified Date Delivery Metrics</h2>
             <div class="date-controls">
                 <input type="date" id="specificDate" class="date-input" placeholder="Select Date">
                 <button onclick="loadSpecificDateCharts()" class="btn btn-primary">Load Specific Date</button>
@@ -587,7 +588,7 @@
 
         <!-- New Notes Section -->
         <div class="dashboard-section">
-            <h2 class="section-title">📝 Operational Notes</h2>
+            <h2 class="section-title">📝 Issue Reporting</h2>
             <div class="notes-container" id="operationalNotes">
                 <div class="loading">Select a specific date to view operational notes...</div>
             </div>

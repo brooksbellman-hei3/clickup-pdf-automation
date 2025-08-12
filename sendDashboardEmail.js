@@ -57,7 +57,7 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
   const emailHtml = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1200px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px;">
-        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700;">🏀 Executive Dashboard Report</h1>
+        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700;">🏀 NBA Operations Dashboard</h1>
         <p style="margin: 10px 0 0 0; font-size: 1.2rem; opacity: 0.9;">Hawkeye Innovations - NBA Operations Analytics</p>
         <p style="margin: 5px 0 0 0; font-size: 1rem; opacity: 0.8;">${currentDate}${dateRangeText}</p>
       </div>
@@ -80,7 +80,7 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to: process.env.EMAIL_TO,
-    subject: `🏀 Executive Dashboard Report - ${currentDate}${dateRangeText}`,
+    subject: `🏀 NBA Operations Dashboard - ${currentDate}${dateRangeText}`,
     html: emailHtml
   });
 
@@ -149,7 +149,7 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
     <!-- Number Cards Section -->
     <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
       <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-        📊 Key Performance Metrics
+        📊 Season Review
       </h2>
       ${numberCardsHtml}
     </div>
@@ -157,7 +157,7 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
     <!-- Specific Date Charts Section -->
     <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
       <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-        📅 Yesterday's Performance (${yesterdayStr})
+        📅 Specified Date Delivery Metrics (${yesterdayStr})
       </h2>
       ${specificDateChartsHtml}
     </div>
@@ -166,7 +166,7 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
     ${operationalNotes.length > 0 ? `
       <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
         <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-          📝 Operational Notes (${yesterdayStr})
+          📝 Issue Reporting (${yesterdayStr})
         </h2>
         ${operationalNotesHtml}
       </div>
