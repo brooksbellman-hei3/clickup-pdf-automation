@@ -16,6 +16,13 @@ const EXECUTIVE_FIELDS = [
   'Resend'
 ];
 
+// Notes fields for operational notes section
+const NOTES_FIELDS = [
+  'Hardware Notes - Live Ops ',
+  'Software Notes - Live Ops ',
+  'Operational Notes - Live Ops '
+];
+
 // Fields that should be displayed as number cards instead of charts
 // Note: These are still generated as charts but displayed as number cards in the header
 const NUMBER_CARD_FIELDS = [
@@ -424,6 +431,59 @@ function filterTasksByEventDate(tasks, targetDate) {
   });
 }
 
+// Function to extract operational notes from tasks
+function extractOperationalNotes(tasks, specificDate = null) {
+  console.log(`📝 Extracting operational notes from ${tasks.length} tasks${specificDate ? ` for date: ${specificDate}` : ''}`);
+  
+  const notes = [];
+  
+  // Filter tasks by date if specific date provided
+  const filteredTasks = specificDate ? filterTasksByEventDate(tasks, specificDate) : tasks;
+  
+  console.log(`📝 Processing ${filteredTasks.length} tasks for notes extraction`);
+  
+  for (const task of filteredTasks) {
+    if (!task.custom_fields) {
+      console.log(`⚠️ Task "${task.name}" has no custom_fields`);
+      continue;
+    }
+    
+    // Check each notes field
+    for (const fieldName of NOTES_FIELDS) {
+      const field = findFieldByName(task.custom_fields, fieldName);
+      
+      if (field) {
+        const value = getFieldValue(field);
+        
+        // Only include notes that have meaningful content
+        if (value && 
+            value.trim() !== '' && 
+            value.toLowerCase() !== 'n/a' && 
+            value.toLowerCase() !== 'na' && 
+            value.toLowerCase() !== 'none' &&
+            value.toLowerCase() !== 'null' &&
+            value.toLowerCase() !== 'undefined') {
+          
+          // Clean up the field name for display
+          const displayName = fieldName.replace(' - Live Ops ', ' Notes');
+          
+          notes.push({
+            taskName: task.name,
+            fieldName: displayName,
+            content: value.trim(),
+            taskId: task.id
+          });
+          
+          console.log(`📝 Found note in "${task.name}": ${displayName}`);
+        }
+      }
+    }
+  }
+  
+  console.log(`📝 Extracted ${notes.length} operational notes`);
+  return notes;
+}
+
 // Modified complete dashboard function to include number card stats
 async function generateCompleteDashboardCharts(tasks, specificDate = null) {
   console.log(`🎨 Generating complete dashboard with charts and number card stats`);
@@ -727,12 +787,6 @@ async function generatePieChart(title, labels, data, colors, index) {
   return await generateSimpleSVGChart(title, labels, data, colors, index, width, height);
 }
 
-
-
-
-
-
-
 // Generate number count chart for specific fields
 async function generateNumberCountChart(tasks, fieldName, title, index) {
   console.log(`🔍 Generating number count chart for "${fieldName}"`);
@@ -930,8 +984,10 @@ module.exports = {
   filterTasksByEventDate,
   calculateDashboardStats,
   generateNumberCardStats,
+  extractOperationalNotes,
   findFieldByName,
   getFieldValue,
   EXECUTIVE_FIELDS,
+  NOTES_FIELDS,
   EXECUTIVE_COLOR_SCHEME
 };

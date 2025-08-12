@@ -224,6 +224,40 @@
             text-align: center;
         }
 
+        .no-notes {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .note-item {
+            background: #ecf0f1;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .note-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        .note-title span {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+
+        .note-content {
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.4;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -328,6 +362,18 @@
                 <div class="loading">Click a test date button to view charts...</div>
             </div>
         </div>
+
+        <!-- New Notes Section -->
+        <div class="dashboard-section">
+            <h2 class="section-title">📝 Operational Notes</h2>
+            <div class="notes-container" id="operationalNotes">
+                <div class="loading">Select a specific date to view operational notes...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Powered by Hawkeye Innovations | Test Dashboard v2.0</p>
     </div>
 
     <script>
@@ -467,44 +513,65 @@
         // Load test specific date charts
         async function loadTestSpecificDate(specificDate) {
             const container = document.getElementById('specificDateCharts');
-            container.innerHTML = '<div class="loading">Loading specific date charts...</div>';
+            const notesContainer = document.getElementById('operationalNotes');
+            
+            container.innerHTML = '<div class="loading">Loading test specific date charts...</div>';
+            notesContainer.innerHTML = '<div class="loading">Loading operational notes...</div>';
             
             try {
                 const response = await fetch(`/api/dashboard/test-complete?specificDate=${specificDate}`);
                 
                 if (!response.ok) {
-                    throw new Error('Failed to load specific date charts');
+                    throw new Error('Failed to load test specific date charts');
                 }
                 
                 const data = await response.json();
                 
-                // The complete endpoint returns both all-time and specific date charts
-                // We need to filter to show only the specific date charts (those with date in title)
+                // Filter to show only the specific date charts
                 const allCharts = data.charts || [];
                 const specificDateCharts = allCharts.filter(chart => 
                     chart.title && chart.title.includes(`(${specificDate})`)
                 );
                 
-                console.log(`📊 Total charts received: ${allCharts.length}`);
-                console.log(`📊 Found ${specificDateCharts.length} specific date charts for ${specificDate}`);
-                console.log('📊 Specific date chart titles:', specificDateCharts.map(c => c.title));
+                // Display the specific date charts
+                displayCharts(container, specificDateCharts, data.stats, data.numberCardStats);
                 
-                // Show specific date charts if found, otherwise show a message
-                if (specificDateCharts.length > 0) {
-                    displayCharts(container, specificDateCharts, data.stats, data.numberCardStats);
-                } else {
-                    container.innerHTML = `<div class="error">No data available for ${specificDate}. Please check if there are any games scheduled for this date.</div>`;
-                }
+                // Display operational notes
+                displayOperationalNotes(notesContainer, data.notes || []);
                 
                 // Update last night's games counter
                 if (data.stats && data.stats.lastNightGames !== undefined) {
-                    updateRowCounters(null, data.stats.lastNightGames);
+                    updateRowCounters(data.stats.totalGames, data.stats.lastNightGames);
                 }
                 
             } catch (error) {
-                console.error('❌ Error loading specific date charts:', error);
+                console.error('❌ Error loading test specific date charts:', error);
                 container.innerHTML = `<div class="error">Error loading charts: ${error.message}</div>`;
+                notesContainer.innerHTML = `<div class="error">Error loading notes: ${error.message}</div>`;
             }
+        }
+
+        // Display operational notes
+        function displayOperationalNotes(container, notes) {
+            console.log('📝 Displaying operational notes:', notes);
+            
+            if (!notes || notes.length === 0) {
+                container.innerHTML = '<div class="no-notes">No operational notes found for this date.</div>';
+                return;
+            }
+            
+            const notesHTML = notes.map(note => `
+                <div class="note-item">
+                    <div class="note-title">
+                        <span>📋</span>
+                        <strong>${note.fieldName}</strong>
+                        <span style="color: #7f8c8d; font-size: 0.9rem; margin-left: auto;">${note.taskName}</span>
+                    </div>
+                    <div class="note-content">${note.content}</div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = notesHTML;
         }
 
         // Set yesterday's date for specific date metrics

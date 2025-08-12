@@ -5,7 +5,7 @@ const sendReport = require('./sendEmail');
 const { generateTestChart } = require('./generateCharts');
 const { testClickUpConnection } = require('./fetchData');
 const { fetchExecutiveDashboardData, filterTasksByDateRange } = require('./fetchData');
-const { generateExecutiveDashboardCharts, generateCompleteDashboardCharts, calculateDashboardStats, generateNumberCardStats } = require('./generateDashboardCharts');
+const { generateExecutiveDashboardCharts, generateCompleteDashboardCharts, calculateDashboardStats, generateNumberCardStats, extractOperationalNotes } = require('./generateDashboardCharts');
 const { sendDashboardEmail } = require('./sendDashboardEmail');
 
 const app = express();
@@ -367,12 +367,16 @@ app.get('/api/dashboard/complete', async (req, res) => {
     
     const result = await generateCompleteDashboardCharts(tasks, specificDate);
     
+    // Extract operational notes for the specific date
+    const notes = extractOperationalNotes(tasks, specificDate);
+    
     res.json({
       success: true,
       charts: result.charts,
       specificDate: specificDate,
       stats: result.stats,
       numberCardStats: result.numberCardStats,
+      notes: notes,
       timestamp: new Date().toISOString()
     });
     
@@ -461,7 +465,10 @@ app.get('/api/dashboard/test-complete', async (req, res) => {
           { name: 'Replay Delivery', value_text: 'S4: Minor Issues (I)' },
           { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
           { name: 'Resend', value_text: 'No' },
-          { name: 'Event Date', value: 1735689600000 } // 2025-01-01
+          { name: 'Event Date', value: 1735689600000 }, // 2025-01-01
+          { name: 'Hardware Notes - Live Ops ', value_text: 'Camera system working perfectly. No issues reported.' },
+          { name: 'Software Notes - Live Ops ', value_text: 'All software systems operational. Minor UI lag in replay system.' },
+          { name: 'Operational Notes - Live Ops ', value_text: 'Smooth operation overall. Team performed excellently.' }
         ]
       },
       {
@@ -471,7 +478,10 @@ app.get('/api/dashboard/test-complete', async (req, res) => {
           { name: 'Replay Delivery', value_text: 'S5: Good' },
           { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
           { name: 'Resend', value_text: 'Yes' },
-          { name: 'Event Date', value: 1735776000000 } // 2025-01-02
+          { name: 'Event Date', value: 1735776000000 }, // 2025-01-02
+          { name: 'Hardware Notes - Live Ops ', value_text: 'Minor camera calibration needed. Otherwise functioning well.' },
+          { name: 'Software Notes - Live Ops ', value_text: 'n/a' },
+          { name: 'Operational Notes - Live Ops ', value_text: 'Resend required due to network interruption. Resolved quickly.' }
         ]
       },
       {
@@ -481,7 +491,10 @@ app.get('/api/dashboard/test-complete', async (req, res) => {
           { name: 'Replay Delivery', value_text: 'S5: Good' },
           { name: 'NBA SLA Delivery Time', value_text: 'Missed: ≤ 30 MIN' },
           { name: 'Resend', value_text: 'No' },
-          { name: 'Event Date', value: 1735862400000 } // 2025-01-03
+          { name: 'Event Date', value: 1735862400000 }, // 2025-01-03
+          { name: 'Hardware Notes - Live Ops ', value_text: 'n/a' },
+          { name: 'Software Notes - Live Ops ', value_text: 'System crash during live tracking. Recovered within 5 minutes.' },
+          { name: 'Operational Notes - Live Ops ', value_text: 'SLA missed due to software crash. Team responded quickly.' }
         ]
       },
       {
@@ -491,12 +504,18 @@ app.get('/api/dashboard/test-complete', async (req, res) => {
           { name: 'Replay Delivery', value_text: 'S4: Minor Issues (I)' },
           { name: 'NBA SLA Delivery Time', value_text: 'Hit SLA' },
           { name: 'Resend', value_text: 'No' },
-          { name: 'Event Date', value: 1735862400000 } // 2025-01-03 (same date as Game 3)
+          { name: 'Event Date', value: 1735862400000 }, // 2025-01-03 (same date as Game 3)
+          { name: 'Hardware Notes - Live Ops ', value_text: 'All hardware systems performing optimally.' },
+          { name: 'Software Notes - Live Ops ', value_text: 'Minor replay system delay. Within acceptable parameters.' },
+          { name: 'Operational Notes - Live Ops ', value_text: 'n/a' }
         ]
       }
     ];
     
     const result = await generateCompleteDashboardCharts(mockTasks, specificDate);
+    
+    // Extract operational notes for the specific date
+    const notes = extractOperationalNotes(mockTasks, specificDate);
     
     res.json({
       success: true,
@@ -504,6 +523,7 @@ app.get('/api/dashboard/test-complete', async (req, res) => {
       specificDate: specificDate,
       stats: result.stats,
       numberCardStats: result.numberCardStats,
+      notes: notes,
       timestamp: new Date().toISOString()
     });
     
