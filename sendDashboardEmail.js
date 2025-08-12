@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const { fetchExecutiveDashboardData } = require('./fetchData');
-const { generateExecutiveDashboardCharts } = require('./generateDashboardCharts');
+const { generateCompleteDashboardCharts, calculateDashboardStats, generateNumberCardStats, extractOperationalNotes } = require('./generateDashboardCharts');
 
 async function sendDashboardEmail(dashboardUrl, dateRange = null) {
   console.log("📧 Sending executive dashboard email...");
@@ -30,89 +30,40 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
     day: 'numeric'
   });
 
-  // Fetch latest data for email summary
+  // Fetch latest data and generate complete dashboard
   const tasks = await fetchExecutiveDashboardData();
   const totalTasks = tasks.length;
-  const processedTasks = tasks.filter(task => task.custom_fields && task.custom_fields.length > 0).length;
-  const successRate = totalTasks > 0 ? Math.round((processedTasks / totalTasks) * 100) : 0;
+  
+  // Generate complete dashboard data
+  const dashboardData = await generateCompleteDashboardCharts(tasks);
+  const stats = calculateDashboardStats(tasks);
+  const numberCardStats = generateNumberCardStats(tasks);
+  const operationalNotes = extractOperationalNotes(tasks);
 
-  // Generate sample charts for email preview
-  const sampleCharts = await generateExecutiveDashboardCharts(tasks.slice(0, 50), dateRange);
-  const chartImagesHtml = sampleCharts.slice(0, 3).map((chart, i) => `
-    <div style="margin: 20px 0; text-align: center;">
-      <h4 style="color: #2c3e50; margin-bottom: 10px;">${chart.title}</h4>
-      <img src="cid:chart${i}@dashboard" alt="${chart.title}" style="max-width: 400px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
-    </div>
-  `).join('');
+  // Generate dashboard HTML
+  const dashboardHtml = generateDashboardEmailHtml(dashboardData, stats, numberCardStats, operationalNotes, currentDate);
 
   const dateRangeText = dateRange 
     ? ` (${dateRange.start} to ${dateRange.end})`
     : '';
 
   const emailHtml = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1200px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px;">
-        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700;">🏀 Overall Season Review</h1>
+        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700;">🏀 Executive Dashboard Report</h1>
         <p style="margin: 10px 0 0 0; font-size: 1.2rem; opacity: 0.9;">Hawkeye Innovations - NBA Operations Analytics</p>
+        <p style="margin: 5px 0 0 0; font-size: 1rem; opacity: 0.8;">${currentDate}${dateRangeText}</p>
       </div>
 
-      <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-        <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-          📊 Executive Dashboard Update${dateRangeText}
-        </h2>
-        
-        <!-- Key Metrics at the Top -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin: 30px 0;">
-          <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;">${totalTasks}</div>
-            <div style="color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase;">Total Tasks</div>
-          </div>
-          <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;">${processedTasks}</div>
-            <div style="color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase;">Processed</div>
-          </div>
-          <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <div style="font-size: 2rem; font-weight: bold; color: #2c3e50;">${successRate}%</div>
-            <div style="color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase;">Success Rate</div>
-          </div>
-        </div>
-        
-        <p style="color: #555; line-height: 1.6; margin-bottom: 25px;">
-          Your executive dashboard has been updated with the latest NBA operations data. 
-          Click the button below to access the full interactive dashboard with real-time metrics and analytics.
-        </p>
+      ${dashboardHtml}
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${dashboardUrl}" style="display: inline-block; background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; transition: background 0.3s ease;">
-            🚀 Access Executive Dashboard
-          </a>
-        </div>
-      </div>
-
-      ${sampleCharts.length > 0 ? `
-        <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-          <h3 style="color: #2c3e50; margin-bottom: 20px;">📈 Sample Metrics</h3>
-          ${chartImagesHtml}
-        </div>
-      ` : ''}
-
-      <div style="background: white; border-radius: 15px; padding: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔗 Quick Links</h3>
-        <ul style="color: #555; line-height: 1.8;">
-          <li><strong>Live Tracking Delivery:</strong> Monitor real-time delivery status</li>
-          <li><strong>Scrubbed Delivery:</strong> Track scrubbing completion rates</li>
-          <li><strong>Replay Delivery:</strong> View replay system performance</li>
-          <li><strong>Operations P-Status:</strong> Check operational priorities</li>
-          <li><strong>Software P-Status:</strong> Monitor software performance</li>
-          <li><strong>Hardware P-Status:</strong> Track hardware status</li>
-          <li><strong>NBA SLA Delivery Time:</strong> SLA compliance metrics</li>
-          <li><strong>Scrub SLA:</strong> Scrubbing SLA performance</li>
-          <li><strong>Resend:</strong> Resend operation statistics</li>
-        </ul>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${dashboardUrl}" style="display: inline-block; background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; transition: background 0.3s ease;">
+          🚀 Access Interactive Dashboard
+        </a>
       </div>
 
       <div style="text-align: center; margin-top: 30px; color: #7f8c8d; font-size: 0.9rem;">
-        <p><strong>Date:</strong> ${currentDate}</p>
         <p><em>This dashboard is powered by Hawkeye Innovations.</em></p>
         <p>For technical support, contact your system administrator.</p>
       </div>
@@ -122,23 +73,154 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to: process.env.EMAIL_TO,
-    subject: `🏀 Executive Dashboard Update - ${currentDate}${dateRangeText}`,
-    html: emailHtml,
-    attachments: sampleCharts.slice(0, 3).map((chart, i) => ({
-      filename: `dashboard_chart${i + 1}.png`,
-      content: Buffer.from(chart.base64Chart, 'base64'),
-      cid: `chart${i}@dashboard`
-    }))
+    subject: `🏀 Executive Dashboard Report - ${currentDate}${dateRangeText}`,
+    html: emailHtml
   });
 
   console.log("✅ Executive dashboard email sent successfully");
+}
+
+// Function to generate dashboard HTML for email
+function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, operationalNotes, currentDate) {
+  // Generate number cards HTML
+  const numberCardsHtml = generateNumberCardsHtml(stats, numberCardStats);
   
-  // Clean up chart files
-  sampleCharts.forEach(chart => {
-    if (require('fs').existsSync(chart.filePath)) {
-      require('fs').unlinkSync(chart.filePath);
+  // Generate all-time charts HTML
+  const allTimeChartsHtml = generateChartsHtml(dashboardData.charts, 'All-Time Metrics');
+  
+  // Generate specific date charts HTML (for yesterday)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const specificDateChartsHtml = generateChartsHtml(dashboardData.specificDateCharts, `Specific Date Metrics (${yesterdayStr})`);
+  
+  // Generate operational notes HTML
+  const operationalNotesHtml = generateOperationalNotesHtml(operationalNotes);
+
+  return `
+    <!-- Number Cards Section -->
+    <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+      <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+        📊 Key Performance Metrics
+      </h2>
+      ${numberCardsHtml}
+    </div>
+
+    <!-- All-Time Charts Section -->
+    <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+      <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+        📈 All-Time Metrics
+      </h2>
+      ${allTimeChartsHtml}
+    </div>
+
+    <!-- Specific Date Charts Section -->
+    <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+      <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+        📅 Yesterday's Performance (${yesterdayStr})
+      </h2>
+      ${specificDateChartsHtml}
+    </div>
+
+    <!-- Operational Notes Section -->
+    ${operationalNotes.length > 0 ? `
+      <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+        <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+          📝 Operational Notes
+        </h2>
+        ${operationalNotesHtml}
+      </div>
+    ` : ''}
+  `;
+}
+
+// Function to generate number cards HTML
+function generateNumberCardsHtml(stats, numberCardStats) {
+  const cards = [
+    { title: 'Total Games', value: stats.totalGames || 0, icon: '🏀' },
+    { title: 'Live Tracking Delivery', value: `${stats.liveTrackingDelivery || 0}%`, icon: '📡' },
+    { title: 'Replay Delivery', value: `${stats.replayDelivery || 0}%`, icon: '🎬' },
+    { title: 'SLA Hit Rate', value: `${stats.slaHitPercentage || 0}%`, icon: '⏱️' },
+    { title: 'Resend Rate', value: `${stats.resendPercentage || 0}%`, icon: '🔄' },
+    { title: 'Last Night Games', value: stats.lastNightGames || 0, icon: '🌙' }
+  ];
+
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+      ${cards.map(card => `
+        <div style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 12px; border-left: 4px solid #3498db;">
+          <div style="font-size: 2.5rem; margin-bottom: 10px;">${card.icon}</div>
+          <div style="font-size: 2rem; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${card.value}</div>
+          <div style="color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase; font-weight: 600;">${card.title}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Function to generate charts HTML
+function generateChartsHtml(charts, sectionTitle) {
+  if (!charts || charts.length === 0) {
+    return `
+      <div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">
+        No charts available for ${sectionTitle}
+      </div>
+    `;
+  }
+
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px;">
+      ${charts.map(chart => `
+        <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
+          <h4 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.1rem;">${chart.title}</h4>
+          <div style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            ${chart.svg}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Function to generate operational notes HTML
+function generateOperationalNotesHtml(notes) {
+  if (!notes || notes.length === 0) {
+    return `
+      <div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">
+        No operational notes found for this period.
+      </div>
+    `;
+  }
+
+  // Group notes by field type
+  const groupedNotes = {};
+  notes.forEach(note => {
+    if (!groupedNotes[note.fieldName]) {
+      groupedNotes[note.fieldName] = [];
     }
+    groupedNotes[note.fieldName].push(note);
   });
+
+  return `
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      ${Object.entries(groupedNotes).map(([fieldName, fieldNotes]) => `
+        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px;">
+          <div style="display: flex; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e9ecef;">
+            <span style="font-size: 1.2rem; margin-right: 8px;">📋</span>
+            <h3 style="color: #2c3e50; margin: 0; font-size: 1.1rem;">${fieldName}</h3>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 15px;">
+            ${fieldNotes.map(note => `
+              <div style="background: white; border-radius: 6px; padding: 15px; border-left: 4px solid #3498db;">
+                <div style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 8px; font-weight: 600;">${note.taskName}</div>
+                <div style="color: #2c3e50; line-height: 1.6;">${note.content}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
 }
 
 // Function to send scheduled dashboard emails
