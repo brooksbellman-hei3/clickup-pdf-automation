@@ -777,8 +777,8 @@ async function generateExecutiveFieldChart(tasks, fieldName, title, index) {
 }
 
 async function generatePieChart(title, labels, data, colors, index) {
-  const width = 700; // Increased from 600
-  const height = 500; // Increased from 400
+  const width = 650; // Slightly smaller than 700 for better legend spacing
+  const height = 450; // Slightly smaller than 500 for better legend spacing
 
   console.log(`🎨 Creating chart: ${title}`);
   console.log(`   Labels: ${labels.join(', ')}`);
@@ -822,9 +822,9 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
   }
 
   // Create a simple text-based chart showing counts
-  const width = 600; // Increased from 500
-  const height = 450; // Increased from 350
-  const padding = 30; // Increased padding
+  const width = 550; // Slightly smaller than 600 for better spacing
+  const height = 400; // Slightly smaller than 450 for better spacing
+  const padding = 25; // Slightly reduced padding
   
   const chartData = Object.entries(counts).map(([label, count]) => {
     let color = EXECUTIVE_COLOR_SCHEME[label] || '#666';
