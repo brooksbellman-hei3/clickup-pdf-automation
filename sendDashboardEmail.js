@@ -34,15 +34,17 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
   const tasks = await fetchExecutiveDashboardData();
   const totalTasks = tasks.length;
   
-  // Generate complete dashboard data
-  const dashboardData = await generateCompleteDashboardCharts(tasks);
-  const stats = calculateDashboardStats(tasks);
-  const numberCardStats = generateNumberCardStats(tasks);
-  
-  // Get yesterday's date and extract notes for yesterday only
+  // Get yesterday's date
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  // Generate complete dashboard data with yesterday's date
+  const dashboardData = await generateCompleteDashboardCharts(tasks, yesterdayStr);
+  const stats = calculateDashboardStats(tasks, yesterdayStr);
+  const numberCardStats = generateNumberCardStats(tasks);
+  
+  // Extract notes for yesterday only
   const operationalNotes = extractOperationalNotes(tasks, yesterdayStr);
 
   // Generate dashboard HTML
@@ -94,7 +96,14 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const specificDateChartsHtml = generateChartsHtml(dashboardData.specificDateCharts, `Yesterday's Performance (${yesterdayStr})`);
+  
+  // Filter specific date charts from the main charts array
+  const specificDateCharts = dashboardData.charts.filter(chart => 
+    chart.title && chart.title.includes(`(${yesterdayStr})`)
+  );
+  const specificDateChartsHtml = specificDateCharts.length > 0 
+    ? generateChartsHtml(specificDateCharts, `Yesterday's Performance (${yesterdayStr})`)
+    : `<div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">No charts available for yesterday's performance (${yesterdayStr})</div>`;
   
   // Generate operational notes HTML for yesterday only
   const operationalNotesHtml = generateOperationalNotesHtml(operationalNotes);
