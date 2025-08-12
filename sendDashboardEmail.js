@@ -101,8 +101,26 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
   const specificDateCharts = dashboardData.charts.filter(chart => 
     chart.title && chart.title.includes(`(${yesterdayStr})`)
   );
-  const specificDateChartsHtml = specificDateCharts.length > 0 
-    ? generateChartsHtml(specificDateCharts, `Yesterday's Performance (${yesterdayStr})`)
+  
+  // Backup method: if no charts found, try to find any charts with dates
+  let backupCharts = [];
+  if (specificDateCharts.length === 0) {
+    console.log(`📧 No charts found for date ${yesterdayStr}, trying backup method...`);
+    console.log(`📧 Available chart titles:`, dashboardData.charts.map(c => c.title).slice(0, 5));
+    
+    // Look for any charts that have a date pattern
+    backupCharts = dashboardData.charts.filter(chart => 
+      chart.title && (chart.title.includes('(') && chart.title.includes(')'))
+    );
+    
+    if (backupCharts.length > 0) {
+      console.log(`📧 Found ${backupCharts.length} backup charts with dates`);
+    }
+  }
+  
+  const chartsToUse = specificDateCharts.length > 0 ? specificDateCharts : backupCharts;
+  const specificDateChartsHtml = chartsToUse.length > 0 
+    ? generateChartsHtml(chartsToUse, `Yesterday's Performance (${yesterdayStr})`)
     : `<div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">No charts available for yesterday's performance (${yesterdayStr})</div>`;
   
   // Generate operational notes HTML for yesterday only
@@ -156,12 +174,12 @@ function generateNumberCardsHtml(stats, numberCardStats) {
   ];
 
   return `
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
       ${cards.map(card => `
-        <div style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 12px; border-left: 4px solid #3498db;">
-          <div style="font-size: 2.5rem; margin-bottom: 10px;">${card.icon}</div>
-          <div style="font-size: 2rem; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${card.value}</div>
-          <div style="color: #7f8c8d; font-size: 0.9rem; text-transform: uppercase; font-weight: 600;">${card.title}</div>
+        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 12px; border-left: 4px solid #3498db;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">${card.icon}</div>
+          <div style="font-size: 1.5rem; font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${card.value}</div>
+          <div style="color: #7f8c8d; font-size: 0.8rem; text-transform: uppercase; font-weight: 600; line-height: 1.2;">${card.title}</div>
         </div>
       `).join('')}
     </div>
