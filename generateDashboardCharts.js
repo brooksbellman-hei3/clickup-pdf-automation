@@ -18,9 +18,10 @@ const EXECUTIVE_FIELDS = [
 
 // Notes fields for operational notes section
 const NOTES_FIELDS = [
-  'Hardware Notes - Live Ops ',
-  'Software Notes - Live Ops ',
-  'Operational Notes - Live Ops '
+  'Hardware Notes - Live Ops',
+  'Software Notes - Live Ops',
+  'Operational Notes - Live Ops',
+  'Scrubbing Notes - US'
 ];
 
 // Fields that should be displayed as number cards instead of charts
@@ -465,7 +466,7 @@ function extractOperationalNotes(tasks, specificDate = null) {
             value.toLowerCase() !== 'undefined') {
           
           // Clean up the field name for display
-          const displayName = fieldName.replace(' - Live Ops ', '');
+          const displayName = fieldName.replace(' - Live Ops', '').replace(' - US', '');
           
           notes.push({
             taskName: task.name,
