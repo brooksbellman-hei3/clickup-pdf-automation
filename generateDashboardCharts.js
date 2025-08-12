@@ -858,7 +858,7 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
       
       <rect width="100%" height="100%" fill="white"/>
       
-      <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
+      <!-- Title removed to avoid duplication with dashboard title -->
       
       ${chartData.map((item, i) => `
         <rect x="${padding}" y="${60 + i * 70}" width="28" height="28" fill="${item.color}" stroke="#333" stroke-width="1"/>
@@ -949,7 +949,7 @@ async function generateSimpleSVGChart(title, labels, data, colors, index, width,
       
       <rect width="100%" height="100%" fill="white"/>
       
-      <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
+      <!-- Title removed to avoid duplication with dashboard title -->
       
       ${slices.map(slice => `
         <path d="${slice.path}" fill="${slice.color}" stroke="white" stroke-width="2"/>

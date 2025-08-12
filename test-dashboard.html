@@ -506,18 +506,18 @@
                 return;
             }
             
-            container.innerHTML = charts.map(chart => {
+            container.innerHTML = charts.map((chart, index) => {
                 // Check if it's an SVG chart
                 if (chart.svg) {
                     return `
-                        <div class="chart-container" onclick="openChartModal('${chart.title}', '${chart.svg.replace(/'/g, "\\'")}')">
+                        <div class="chart-container" onclick="openChartModal('${chart.title.replace(/'/g, "\\'")}', '${chart.svg.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
                             <div class="chart-title">${chart.title}</div>
                             <div class="chart-image">${chart.svg}</div>
                         </div>
                     `;
                 } else {
                     return `
-                        <div class="chart-container" onclick="openChartModal('${chart.title}', '<img src=\\"data:image/png;base64,${chart.base64Chart}\\" alt=\\"${chart.title}\\" class=\\"chart-modal-image\\">')">
+                        <div class="chart-container" onclick="openChartModal('${chart.title.replace(/'/g, "\\'")}', '<img src=\\"data:image/png;base64,${chart.base64Chart}\\" alt=\\"${chart.title.replace(/"/g, '\\"')}\\" class=\\"chart-modal-image\\">')">
                             <div class="chart-title">${chart.title}</div>
                             <img src="data:image/png;base64,${chart.base64Chart}" alt="${chart.title}" class="chart-image">
                         </div>
@@ -767,9 +767,16 @@
         
         // Chart zoom functionality
         function openChartModal(title, content) {
+            console.log('🔍 Opening chart modal:', { title, contentLength: content.length });
+            
             const modal = document.getElementById('chartModal');
             const modalTitle = document.getElementById('chartModalTitle');
             const modalContent = document.getElementById('chartModalContent');
+            
+            if (!modal || !modalTitle || !modalContent) {
+                console.error('❌ Modal elements not found');
+                return;
+            }
             
             modalTitle.textContent = title;
             modalContent.innerHTML = content;
@@ -777,6 +784,8 @@
             
             // Prevent body scroll when modal is open
             document.body.style.overflow = 'hidden';
+            
+            console.log('✅ Modal opened successfully');
         }
         
         function closeChartModal() {
