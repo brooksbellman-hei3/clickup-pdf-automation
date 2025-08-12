@@ -274,6 +274,55 @@
             font-style: italic;
             padding: 40px 20px;
         }
+        
+        .note-group {
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .group-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+        
+        .group-title span {
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+        
+        .games-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .game-note {
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .game-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .game-content {
+            color: #34495e;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
 
         .success {
             background: #27ae60;
@@ -581,16 +630,36 @@
                 return;
             }
             
-            const notesHTML = notes.map(note => `
-                <div class="note-item">
-                    <div class="note-title">
-                        <span>📋</span>
-                        <strong>${note.fieldName}</strong>
-                        <span style="color: #7f8c8d; font-size: 0.9rem; margin-left: auto;">${note.taskName}</span>
+            // Group notes by field type
+            const groupedNotes = {};
+            notes.forEach(note => {
+                if (!groupedNotes[note.fieldName]) {
+                    groupedNotes[note.fieldName] = [];
+                }
+                groupedNotes[note.fieldName].push(note);
+            });
+            
+            // Generate HTML for grouped notes
+            const notesHTML = Object.entries(groupedNotes).map(([fieldName, fieldNotes]) => {
+                const gamesHTML = fieldNotes.map(note => `
+                    <div class="game-note">
+                        <div class="game-name">${note.taskName}</div>
+                        <div class="game-content">${note.content}</div>
                     </div>
-                    <div class="note-content">${note.content}</div>
-                </div>
-            `).join('');
+                `).join('');
+                
+                return `
+                    <div class="note-group">
+                        <div class="group-title">
+                            <span>📋</span>
+                            <strong>${fieldName}</strong>
+                        </div>
+                        <div class="games-list">
+                            ${gamesHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('');
             
             container.innerHTML = notesHTML;
         }
