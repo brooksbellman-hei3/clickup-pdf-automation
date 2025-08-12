@@ -671,6 +671,7 @@ app.get('/send-dashboard-email/:date', async (req, res) => {
     // Send the dashboard email asynchronously
     setImmediate(async () => {
       try {
+        console.log('📧 Server: About to call sendDashboardEmail function...');
         await sendDashboardEmail(dashboardUrl, { start: specificDate, end: specificDate });
         console.log('✅ Dashboard email completed successfully');
       } catch (error) {

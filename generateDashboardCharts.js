@@ -822,9 +822,9 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
   }
 
   // Create a simple text-based chart showing counts
-  const width = 400;
-  const height = 300;
-  const padding = 20;
+  const width = 500; // Increased width
+  const height = 350; // Increased height
+  const padding = 25; // Increased padding
   
   const chartData = Object.entries(counts).map(([label, count]) => {
     let color = EXECUTIVE_COLOR_SCHEME[label] || '#666';
@@ -850,9 +850,9 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         <style>
-          .title { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #000; }
-          .count-label { font-family: Arial, sans-serif; font-size: 14px; fill: #333; }
-          .count-value { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }
+          .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }
+          .count-label { font-family: Arial, sans-serif; font-size: 16px; fill: #333; }
+          .count-value { font-family: Arial, sans-serif; font-size: 20px; font-weight: bold; fill: #000; }
         </style>
       </defs>
       
@@ -861,9 +861,9 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
       <text x="${width / 2}" y="25" text-anchor="middle" class="title">${title}</text>
       
       ${chartData.map((item, i) => `
-        <rect x="${padding}" y="${60 + i * 50}" width="20" height="20" fill="${item.color}" stroke="#333" stroke-width="1"/>
-        <text x="${padding + 30}" y="${75 + i * 50}" class="count-label">${item.label}:</text>
-        <text x="${width - padding}" y="${75 + i * 50}" text-anchor="end" class="count-value">${item.count}</text>
+        <rect x="${padding}" y="${60 + i * 60}" width="24" height="24" fill="${item.color}" stroke="#333" stroke-width="1"/>
+        <text x="${padding + 35}" y="${80 + i * 60}" class="count-label">${item.label}:</text>
+        <text x="${width - padding}" y="${80 + i * 60}" text-anchor="end" class="count-value">${item.count}</text>
       `).join('')}
     </svg>
   `;
@@ -883,9 +883,9 @@ async function generateSimpleSVGChart(title, labels, data, colors, index, width,
   console.log(`   Generating simple SVG fallback chart...`);
   
   const total = data.reduce((sum, val) => sum + val, 0);
-  const chartCenterX = width * 0.35;
+  const chartCenterX = width * 0.3; // Moved chart more to the left
   const chartCenterY = height * 0.5;
-  const radius = Math.min(width * 0.2, height * 0.2);
+  const radius = Math.min(width * 0.25, height * 0.25); // Increased radius for larger charts
   
   let currentAngle = -Math.PI / 2;
   const slices = data.map((value, i) => {
@@ -933,17 +933,17 @@ async function generateSimpleSVGChart(title, labels, data, colors, index, width,
     };
   });
   
-  const legendX = width * 0.6;
-  const legendStartY = height * 0.25;
-  const labelHeight = 25; // Increased spacing between legend items
+  const legendX = width * 0.55; // Moved legend closer to chart
+  const legendStartY = height * 0.2; // Moved legend higher
+  const labelHeight = 30; // Increased spacing between legend items for better readability
   
   const svg = `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         <style>
-          .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }
-          .legend-text { font-family: Arial, sans-serif; font-size: 12px; fill: #000; }
-          .legend-value { font-family: Arial, sans-serif; font-size: 10px; fill: #666; }
+          .title { font-family: Arial, sans-serif; font-size: 20px; font-weight: bold; fill: #000; }
+          .legend-text { font-family: Arial, sans-serif; font-size: 14px; fill: #000; }
+          .legend-value { font-family: Arial, sans-serif; font-size: 12px; fill: #666; }
         </style>
       </defs>
       
@@ -956,9 +956,9 @@ async function generateSimpleSVGChart(title, labels, data, colors, index, width,
       `).join('')}
       
       ${slices.map((slice, i) => `
-        <rect x="${legendX}" y="${legendStartY + i * labelHeight}" width="12" height="12" fill="${slice.color}"/>
-        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 9}" class="legend-text">${slice.label}</text>
-        <text x="${legendX + 20}" y="${legendStartY + i * labelHeight + 22}" class="legend-value">${slice.value} (${slice.percentage}%)</text>
+        <rect x="${legendX}" y="${legendStartY + i * labelHeight}" width="16" height="16" fill="${slice.color}"/>
+        <text x="${legendX + 25}" y="${legendStartY + i * labelHeight + 12}" class="legend-text">${slice.label}</text>
+        <text x="${legendX + 25}" y="${legendStartY + i * labelHeight + 28}" class="legend-value">${slice.value} (${slice.percentage}%)</text>
       `).join('')}
     </svg>
   `;

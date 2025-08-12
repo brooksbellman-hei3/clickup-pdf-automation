@@ -100,7 +100,7 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
   // Debug: Log what we're working with
   console.log(`📧 Email debugging - Yesterday's date: ${yesterdayStr}`);
   console.log(`📧 Total charts available: ${dashboardData.charts.length}`);
-  console.log(`📧 Chart titles:`, dashboardData.charts.map(c => c.title).slice(0, 10));
+  console.log(`📧 All chart titles:`, dashboardData.charts.map(c => c.title));
   
   // Filter specific date charts from the main charts array
   const specificDateCharts = dashboardData.charts.filter(chart => 
@@ -108,6 +108,7 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
   );
   
   console.log(`📧 Found ${specificDateCharts.length} charts for date ${yesterdayStr}`);
+  console.log(`📧 Specific date chart titles:`, specificDateCharts.map(c => c.title));
   
   // Backup method: if no charts found, try to find any charts with dates
   let backupCharts = [];
@@ -128,8 +129,17 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
   const chartsToUse = specificDateCharts.length > 0 ? specificDateCharts : backupCharts;
   console.log(`📧 Using ${chartsToUse.length} charts for email`);
   
-  const specificDateChartsHtml = chartsToUse.length > 0 
-    ? generateChartsHtml(chartsToUse, `Yesterday's Performance (${yesterdayStr})`)
+  // If still no charts, use ALL charts as a last resort
+  let finalCharts = chartsToUse;
+  if (chartsToUse.length === 0) {
+    console.log(`📧 No charts found with dates, using ALL charts as fallback`);
+    finalCharts = dashboardData.charts;
+  }
+  
+  console.log(`📧 Final charts to use:`, finalCharts.map(c => c.title));
+  
+  const specificDateChartsHtml = finalCharts.length > 0 
+    ? generateChartsHtml(finalCharts, `Yesterday's Performance (${yesterdayStr})`)
     : `<div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">No charts available for yesterday's performance (${yesterdayStr})</div>`;
   
   // Generate operational notes HTML for yesterday only
@@ -212,14 +222,21 @@ function generateChartsHtml(charts, sectionTitle) {
   
   return `
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px;">
-      ${charts.map(chart => `
-        <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
-          <h4 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.1rem;">${chart.title}</h4>
-          <div style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            ${chart.svg || '<p style="color: #7f8c8d;">Chart SVG not available</p>'}
+      ${charts.map((chart, index) => {
+        console.log(`📧 Processing chart ${index + 1}: ${chart.title}`);
+        console.log(`📧 Chart has SVG: ${!!chart.svg}`);
+        console.log(`📧 SVG length: ${chart.svg ? chart.svg.length : 0}`);
+        console.log(`📧 SVG preview: ${chart.svg ? chart.svg.substring(0, 100) + '...' : 'NO SVG'}`);
+        
+        return `
+          <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
+            <h4 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.1rem;">${chart.title}</h4>
+            <div style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ${chart.svg || '<p style="color: #7f8c8d;">Chart SVG not available</p>'}
+            </div>
           </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
   `;
 }
