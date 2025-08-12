@@ -774,20 +774,30 @@
                 // Check if it's an SVG chart
                 if (chart.svg) {
                     return `
-                        <div class="chart-container" onclick="openChartModal('${chart.title.replace(/'/g, "\\'")}', '${chart.svg.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
+                        <div class="chart-container" data-chart-title="${chart.title}" data-chart-content="${chart.svg.replace(/"/g, '&quot;')}">
                             <div class="chart-title">${chart.title}</div>
                             <div class="chart-image">${chart.svg}</div>
                         </div>
                     `;
                 } else {
                     return `
-                        <div class="chart-container" onclick="openChartModal('${chart.title.replace(/'/g, "\\'")}', '<img src=\\"data:image/png;base64,${chart.base64Chart}\\" alt=\\"${chart.title.replace(/"/g, '\\"')}\\" class=\\"chart-modal-image\\">')">
+                        <div class="chart-container" data-chart-title="${chart.title}" data-chart-content="<img src=&quot;data:image/png;base64,${chart.base64Chart}&quot; alt=&quot;${chart.title}&quot; class=&quot;chart-modal-image&quot;>">
                             <div class="chart-title">${chart.title}</div>
                             <img src="data:image/png;base64,${chart.base64Chart}" alt="${chart.title}" class="chart-image">
                         </div>
                     `;
                 }
             }).join('');
+            
+            // Add click event listeners after rendering
+            const chartContainers = container.querySelectorAll('.chart-container');
+            chartContainers.forEach(container => {
+                container.addEventListener('click', function() {
+                    const title = this.getAttribute('data-chart-title');
+                    const content = this.getAttribute('data-chart-content');
+                    openChartModal(title, content);
+                });
+            });
             
             // Update stats if provided
             if (stats) {
