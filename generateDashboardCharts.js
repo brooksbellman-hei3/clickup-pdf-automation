@@ -792,7 +792,7 @@ async function generateNumberCountChart(tasks, fieldName, title, index) {
 
   // Create SVG for number count display
   const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         <style>
           .title { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #000; }
@@ -883,7 +883,7 @@ async function generateSimpleSVGChart(title, labels, data, colors, index, width,
   const labelHeight = 25; // Increased spacing between legend items
   
   const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         <style>
           .title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #000; }

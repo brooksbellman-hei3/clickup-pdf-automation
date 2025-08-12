@@ -125,7 +125,7 @@
 
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
             gap: 25px;
         }
 
@@ -135,6 +135,8 @@
             padding: 20px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
+            overflow: visible;
+            min-height: 400px;
         }
 
         .chart-container:hover {
@@ -154,6 +156,17 @@
             height: auto;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: visible;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .chart-image svg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            overflow: visible;
         }
 
         .btn {
@@ -209,6 +222,47 @@
             border-radius: 8px;
             margin: 20px 0;
             text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .chart-container {
+                min-height: 350px;
+                padding: 15px;
+            }
+            
+            .chart-image svg {
+                max-width: 100%;
+                height: auto;
+            }
+            
+            .date-controls {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .chart-container {
+                min-height: 300px;
+                padding: 10px;
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
         }
     </style>
 </head>
