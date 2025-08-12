@@ -38,7 +38,12 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
   const dashboardData = await generateCompleteDashboardCharts(tasks);
   const stats = calculateDashboardStats(tasks);
   const numberCardStats = generateNumberCardStats(tasks);
-  const operationalNotes = extractOperationalNotes(tasks);
+  
+  // Get yesterday's date and extract notes for yesterday only
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const operationalNotes = extractOperationalNotes(tasks, yesterdayStr);
 
   // Generate dashboard HTML
   const dashboardHtml = generateDashboardEmailHtml(dashboardData, stats, numberCardStats, operationalNotes, currentDate);
@@ -82,19 +87,16 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
 
 // Function to generate dashboard HTML for email
 function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, operationalNotes, currentDate) {
-  // Generate number cards HTML
+  // Generate number cards HTML with last night's information
   const numberCardsHtml = generateNumberCardsHtml(stats, numberCardStats);
-  
-  // Generate all-time charts HTML
-  const allTimeChartsHtml = generateChartsHtml(dashboardData.charts, 'All-Time Metrics');
   
   // Generate specific date charts HTML (for yesterday)
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const specificDateChartsHtml = generateChartsHtml(dashboardData.specificDateCharts, `Specific Date Metrics (${yesterdayStr})`);
+  const specificDateChartsHtml = generateChartsHtml(dashboardData.specificDateCharts, `Yesterday's Performance (${yesterdayStr})`);
   
-  // Generate operational notes HTML
+  // Generate operational notes HTML for yesterday only
   const operationalNotesHtml = generateOperationalNotesHtml(operationalNotes);
 
   return `
@@ -104,14 +106,6 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
         📊 Key Performance Metrics
       </h2>
       ${numberCardsHtml}
-    </div>
-
-    <!-- All-Time Charts Section -->
-    <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-      <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-        📈 All-Time Metrics
-      </h2>
-      ${allTimeChartsHtml}
     </div>
 
     <!-- Specific Date Charts Section -->
@@ -126,7 +120,7 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
     ${operationalNotes.length > 0 ? `
       <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
         <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-          📝 Operational Notes
+          📝 Operational Notes (${yesterdayStr})
         </h2>
         ${operationalNotesHtml}
       </div>
@@ -136,13 +130,20 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
 
 // Function to generate number cards HTML
 function generateNumberCardsHtml(stats, numberCardStats) {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
   const cards = [
     { title: 'Total Games', value: stats.totalGames || 0, icon: '🏀' },
     { title: 'Live Tracking Delivery', value: `${stats.liveTrackingDelivery || 0}%`, icon: '📡' },
     { title: 'Replay Delivery', value: `${stats.replayDelivery || 0}%`, icon: '🎬' },
     { title: 'SLA Hit Rate', value: `${stats.slaHitPercentage || 0}%`, icon: '⏱️' },
     { title: 'Resend Rate', value: `${stats.resendPercentage || 0}%`, icon: '🔄' },
-    { title: 'Last Night Games', value: stats.lastNightGames || 0, icon: '🌙' }
+    { title: `Last Night Games (${yesterdayStr})`, value: stats.lastNightGames || 0, icon: '🌙' },
+    { title: 'Last Night SLAs Hit', value: stats.lastNightSLAsHit || 0, icon: '✅' },
+    { title: 'Last Night SLAs Missed', value: stats.lastNightSLAsMissed || 0, icon: '❌' },
+    { title: 'Last Night Resends', value: stats.lastNightResends || 0, icon: '🔄' }
   ];
 
   return `
@@ -180,6 +181,17 @@ function generateChartsHtml(charts, sectionTitle) {
       `).join('')}
     </div>
   `;
+}
+
+// Function to filter operational notes by date
+function extractOperationalNotesForDate(notes, targetDate) {
+  if (!notes || notes.length === 0) {
+    return [];
+  }
+  
+  // Since we're already filtering at the data level, just return the notes
+  // The extractOperationalNotes function in generateDashboardCharts.js handles the date filtering
+  return notes;
 }
 
 // Function to generate operational notes HTML
