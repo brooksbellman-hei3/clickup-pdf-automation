@@ -97,16 +97,22 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
   
+  // Debug: Log what we're working with
+  console.log(`📧 Email debugging - Yesterday's date: ${yesterdayStr}`);
+  console.log(`📧 Total charts available: ${dashboardData.charts.length}`);
+  console.log(`📧 Chart titles:`, dashboardData.charts.map(c => c.title).slice(0, 10));
+  
   // Filter specific date charts from the main charts array
   const specificDateCharts = dashboardData.charts.filter(chart => 
     chart.title && chart.title.includes(`(${yesterdayStr})`)
   );
   
+  console.log(`📧 Found ${specificDateCharts.length} charts for date ${yesterdayStr}`);
+  
   // Backup method: if no charts found, try to find any charts with dates
   let backupCharts = [];
   if (specificDateCharts.length === 0) {
     console.log(`📧 No charts found for date ${yesterdayStr}, trying backup method...`);
-    console.log(`📧 Available chart titles:`, dashboardData.charts.map(c => c.title).slice(0, 5));
     
     // Look for any charts that have a date pattern
     backupCharts = dashboardData.charts.filter(chart => 
@@ -115,10 +121,13 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
     
     if (backupCharts.length > 0) {
       console.log(`📧 Found ${backupCharts.length} backup charts with dates`);
+      console.log(`📧 Backup chart titles:`, backupCharts.map(c => c.title).slice(0, 5));
     }
   }
   
   const chartsToUse = specificDateCharts.length > 0 ? specificDateCharts : backupCharts;
+  console.log(`📧 Using ${chartsToUse.length} charts for email`);
+  
   const specificDateChartsHtml = chartsToUse.length > 0 
     ? generateChartsHtml(chartsToUse, `Yesterday's Performance (${yesterdayStr})`)
     : `<div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">No charts available for yesterday's performance (${yesterdayStr})</div>`;
@@ -188,7 +197,10 @@ function generateNumberCardsHtml(stats, numberCardStats) {
 
 // Function to generate charts HTML
 function generateChartsHtml(charts, sectionTitle) {
+  console.log(`📧 generateChartsHtml called with ${charts.length} charts for "${sectionTitle}"`);
+  
   if (!charts || charts.length === 0) {
+    console.log(`📧 No charts provided to generateChartsHtml`);
     return `
       <div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">
         No charts available for ${sectionTitle}
@@ -196,13 +208,15 @@ function generateChartsHtml(charts, sectionTitle) {
     `;
   }
 
+  console.log(`📧 Generating HTML for charts:`, charts.map(c => c.title));
+  
   return `
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px;">
       ${charts.map(chart => `
         <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
           <h4 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.1rem;">${chart.title}</h4>
           <div style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            ${chart.svg}
+            ${chart.svg || '<p style="color: #7f8c8d;">Chart SVG not available</p>'}
           </div>
         </div>
       `).join('')}
