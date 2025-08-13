@@ -64,6 +64,13 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
 
       ${dashboardHtml}
 
+      <!-- Email Client Compatibility Notice -->
+      <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+        <p style="margin: 0; color: #856404; font-size: 0.9rem;">
+          <strong>📧 Email Compatibility Note:</strong> If charts are not displaying, please click the "Access Interactive Dashboard" button below for the full experience.
+        </p>
+      </div>
+
       <div style="text-align: center; margin: 30px 0;">
         <a href="${dashboardUrl}" style="display: inline-block; background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1.1rem; transition: background 0.3s ease;">
           🚀 Access Interactive Dashboard
@@ -73,6 +80,10 @@ async function sendDashboardEmail(dashboardUrl, dateRange = null) {
       <div style="text-align: center; margin-top: 30px; color: #7f8c8d; font-size: 0.9rem;">
         <p><em>This dashboard is powered by Hawkeye Innovations.</em></p>
         <p>For technical support, contact your system administrator.</p>
+        <p style="margin-top: 10px; font-size: 0.8rem;">
+          <strong>Chart Display Issues?</strong> Some email clients may not display SVG charts. 
+          Use the interactive dashboard link above for the complete experience.
+        </p>
       </div>
     </div>
   `;
@@ -142,6 +153,9 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
     ? generateChartsHtml(finalCharts, `Yesterday's Performance (${yesterdayStr})`)
     : `<div style="text-align: center; padding: 40px; color: #7f8c8d; font-style: italic;">No charts available for yesterday's performance (${yesterdayStr})</div>`;
   
+  // Add text summary of chart data for email clients that don't support SVG
+  const chartSummaryHtml = finalCharts.length > 0 ? generateChartSummaryHtml(finalCharts) : '';
+  
   // Generate operational notes HTML for yesterday only
   const operationalNotesHtml = generateOperationalNotesHtml(operationalNotes);
 
@@ -161,6 +175,16 @@ function generateDashboardEmailHtml(dashboardData, stats, numberCardStats, opera
       </h2>
       ${specificDateChartsHtml}
     </div>
+
+    <!-- Chart Data Summary (for email clients that don't support SVG) -->
+    ${chartSummaryHtml ? `
+      <div style="background: white; border-radius: 15px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+        <h2 style="color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+          📊 Chart Data Summary (${yesterdayStr})
+        </h2>
+        ${chartSummaryHtml}
+      </div>
+    ` : ''}
 
     <!-- Operational Notes Section -->
     ${operationalNotes.length > 0 ? `
@@ -205,7 +229,7 @@ function generateNumberCardsHtml(stats, numberCardStats) {
   `;
 }
 
-// Function to generate charts HTML
+// Function to generate charts HTML with multiple fallback options
 function generateChartsHtml(charts, sectionTitle) {
   console.log(`📧 generateChartsHtml called with ${charts.length} charts for "${sectionTitle}"`);
   
@@ -228,11 +252,54 @@ function generateChartsHtml(charts, sectionTitle) {
         console.log(`📧 SVG length: ${chart.svg ? chart.svg.length : 0}`);
         console.log(`📧 SVG preview: ${chart.svg ? chart.svg.substring(0, 100) + '...' : 'NO SVG'}`);
         
+        // Multiple fallback options for better email compatibility
+        let chartContent = '';
+        
+        if (chart.svg) {
+          // Primary: Inline SVG
+          chartContent = `
+            <div style="text-align: center; margin-bottom: 10px;">
+              ${chart.svg}
+            </div>
+          `;
+          
+          // Fallback: Base64 image if available
+          if (chart.base64Chart) {
+            chartContent += `
+              <div style="text-align: center; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                <p style="margin: 0; font-size: 12px; color: #7f8c8d;">Alternative format:</p>
+                <img src="data:image/png;base64,${chart.base64Chart}" alt="${chart.title}" style="max-width: 100%; height: auto; border-radius: 4px; margin-top: 5px;">
+              </div>
+            `;
+          }
+          
+          // Fallback: Text representation
+          chartContent += `
+            <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 11px; text-align: left;">
+              <strong>Chart Data:</strong><br>
+              Title: ${chart.title}<br>
+              Type: ${chart.filePath ? chart.filePath.split('.').pop() : 'Unknown'}<br>
+              SVG Length: ${chart.svg.length} characters<br>
+              ${chart.data ? `Data: ${JSON.stringify(chart.data).substring(0, 200)}...` : 'No data available'}
+            </div>
+          `;
+        } else if (chart.base64Chart) {
+          chartContent = `
+            <img src="data:image/png;base64,${chart.base64Chart}" alt="${chart.title}" style="max-width: 100%; height: auto; border-radius: 4px;">
+          `;
+        } else {
+          chartContent = `
+            <div style="color: #7f8c8d; font-style: italic; padding: 20px;">
+              Chart content not available for: ${chart.title}
+            </div>
+          `;
+        }
+        
         return `
           <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center;">
             <h4 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.1rem;">${chart.title}</h4>
             <div style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              ${chart.svg || '<p style="color: #7f8c8d;">Chart SVG not available</p>'}
+              ${chartContent}
             </div>
           </div>
         `;
@@ -250,6 +317,37 @@ function extractOperationalNotesForDate(notes, targetDate) {
   // Since we're already filtering at the data level, just return the notes
   // The extractOperationalNotes function in generateDashboardCharts.js handles the date filtering
   return notes;
+}
+
+// Function to generate chart data summary for email clients that don't support SVG
+function generateChartSummaryHtml(charts) {
+  if (!charts || charts.length === 0) {
+    return '<div style="text-align: center; color: #7f8c8d; font-style: italic;">No chart data available</div>';
+  }
+
+  return `
+    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px;">
+      <p style="margin: 0 0 15px 0; color: #2c3e50; font-weight: 600;">
+        📊 Chart Data Summary (for email clients with limited SVG support):
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        ${charts.map((chart, index) => `
+          <div style="background: white; border-radius: 6px; padding: 15px; border-left: 4px solid #3498db;">
+            <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1rem;">${index + 1}. ${chart.title}</h4>
+            <div style="font-family: monospace; font-size: 12px; color: #555; line-height: 1.4;">
+              <strong>Chart Type:</strong> ${chart.filePath ? chart.filePath.split('.').pop().toUpperCase() : 'SVG'}<br>
+              <strong>Content Size:</strong> ${chart.svg ? chart.svg.length : 0} characters<br>
+              ${chart.data ? `<strong>Data Points:</strong> ${Object.keys(chart.data).length}<br>` : ''}
+              ${chart.data ? `<strong>Values:</strong> ${JSON.stringify(chart.data).substring(0, 150)}...` : 'No data available'}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <p style="margin: 15px 0 0 0; font-size: 12px; color: #7f8c8d; text-align: center;">
+        💡 <strong>Tip:</strong> Click "Access Interactive Dashboard" above for full chart visualization
+      </p>
+    </div>
+  `;
 }
 
 // Function to generate operational notes HTML
